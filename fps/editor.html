@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VALOTIZ — Éditeur de map</title>
+<script type="importmap">{ "imports": { "three": "./three.module.min.js" } }</script>
+<style>
+  :root { --bg:#0d1420; --panel:#121c2b; --panel2:#18253a; --line:#26384f; --txt:#dce6f2; --mut:#8aa0b8; --acc:#38d6c6; --acc2:#5fb0ff; }
+  * { box-sizing:border-box; margin:0; }
+  html,body { height:100%; }
+  body { background:var(--bg); color:var(--txt); font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif; display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; align-items:center; gap:14px; padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; font-weight:800; letter-spacing:1px; }
+  header h1 b { color:var(--acc); }
+  header .sp { flex:1; }
+  header .mapname { background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:6px 10px; width:220px; }
+  .btn { background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:7px 12px; cursor:pointer; font-weight:600; }
+  .btn:hover { border-color:var(--acc); }
+  .btn.pri { background:linear-gradient(180deg,#2fe4d0,#0e9c93); color:#042; border:0; }
+  .btn.warn { color:#ff9aa6; }
+  main { flex:1; display:flex; min-height:0; }
+  .tools { width:62px; background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; gap:4px; padding:8px 6px; overflow:auto; }
+  .tool { height:48px; border-radius:9px; border:1px solid transparent; background:var(--panel2); color:var(--txt); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; gap:2px; }
+  .tool .ic { font-size:17px; }
+  .tool.on { border-color:var(--acc); background:#143a3a; color:#aef; }
+  .tool:hover { border-color:var(--acc2); }
+  .canvaswrap { flex:1; position:relative; min-width:0; background:#0a0f18; }
+  #c2d { position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; }
+  .hint { position:absolute; left:10px; bottom:8px; font-size:12px; color:var(--mut); pointer-events:none; background:#0009; padding:4px 8px; border-radius:6px; }
+  .side { width:286px; background:var(--panel); border-left:1px solid var(--line); overflow:auto; padding:12px; display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .card h3 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--mut); margin-bottom:8px; }
+  .row { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .row label { width:66px; color:var(--mut); font-size:12px; }
+  .row input[type=number], .row input[type=text], .row select { flex:1; background:var(--bg); border:1px solid var(--line); color:var(--txt); border-radius:6px; padding:5px 7px; width:100%; }
+  .row input[type=range] { flex:1; }
+  .mats { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .mat { height:34px; border-radius:7px; border:2px solid transparent; cursor:pointer; display:flex; align-items:flex-end; justify-content:center; font-size:10px; font-weight:700; color:#0008; padding-bottom:2px; }
+  .mat.on { border-color:#fff; }
+  .maplist { display:flex; flex-direction:column; gap:5px; max-height:170px; overflow:auto; }
+  .maprow { display:flex; align-items:center; gap:6px; background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:5px 7px; }
+  .maprow span { flex:1; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .maprow .mini { padding:4px 8px; font-size:11px; }
+  .muted { color:var(--mut); font-size:12px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  /* aperçu 3D */
+  #prev { position:absolute; inset:0; background:#000d; display:none; align-items:center; justify-content:center; z-index:20; }
+  #prev.on { display:flex; }
+  #prev canvas { border-radius:10px; box-shadow:0 20px 60px #000a; }
+  #prev .close { position:absolute; top:14px; right:16px; }
+  #prev .pvhint { position:absolute; bottom:16px; color:#cde; font-size:13px; background:#0007; padding:6px 12px; border-radius:7px; }
+  .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#143a3a; border:1px solid var(--acc); color:#cffaf4; padding:9px 16px; border-radius:9px; opacity:0; transition:opacity .2s; z-index:40; pointer-events:none; }
+  .toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>VALO<b>TIZ</b> · Éditeur</h1>
+  <input class="mapname" id="mapName" value="Nouvelle map" title="Nom de la map">
+  <select class="mapname" id="mapTheme" style="width:120px" title="Thème">
+    <option value="pearl">Thème Pearl</option>
+    <option value="haven">Thème Haven</option>
+  </select>
+  <div class="sp"></div>
+  <button class="btn" id="bNew">Nouveau</button>
+  <button class="btn" id="bTpl">Modèle Pearl</button>
+  <button class="btn" id="bPrev">Aperçu 3D</button>
+  <button class="btn pri" id="bPlay">▶ Jouer</button>
+</header>
+<main>
+  <div class="tools" id="tools"></div>
+  <div class="canvaswrap">
+    <canvas id="c2d"></canvas>
+    <div class="hint" id="hint"></div>
+    <div id="prev"><canvas id="pv" width="860" height="560"></canvas><button class="btn close" id="bClosePrev">✕ Fermer</button><div class="pvhint">glisser = tourner · molette = zoom</div></div>
+  </div>
+  <div class="side">
+    <div class="card">
+      <h3>Propriétés</h3>
+      <div id="props"><div class="muted">Rien de sélectionné. Choisis un outil à gauche et clique/glisse sur la grille.</div></div>
+    </div>
+    <div class="card" id="matCard" style="display:none">
+      <h3>Matériau</h3>
+      <div class="mats" id="mats"></div>
+    </div>
+    <div class="card">
+      <h3>Map</h3>
+      <div class="row"><label>Équipes</label><select id="mapTeam"><option value="2">2v2</option><option value="5" selected>5v5</option></select></div>
+      <div class="grid2">
+        <button class="btn" id="bSave">💾 Sauver</button>
+        <button class="btn" id="bExport">⬇ Export .json</button>
+        <button class="btn" id="bImport">⬆ Import .json</button>
+        <button class="btn warn" id="bClear">Vider</button>
+      </div>
+      <input type="file" id="fileIn" accept="application/json" hidden>
+    </div>
+    <div class="card">
+      <h3>Mes maps (sauvegardées)</h3>
+      <div class="maplist" id="maplist"></div>
+    </div>
+    <div class="card"><div class="muted">Astuce : <b>Suppr</b> efface le bloc sélectionné · <b>Ctrl+Z / Ctrl+Y</b> annuler/refaire · molette = zoom · clic-droit glissé = déplacer la vue.</div></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import * as THREE from "three";
+
+// ===== constantes partagées avec le jeu =====
+const MAPX = 44, MAPZ = 64;                 // demi-dimensions de l'arène (fixe)
+const MATS = [
+  { k:"wall",  name:"Mur",    col:"#c2ccce" },
+  { k:"crate", name:"Caisse", col:"#8793a0" },
+  { k:"wood",  name:"Bois",   col:"#6f7a84" },
+  { k:"stone", name:"Pierre", col:"#7e8c94" },
+  { k:"gold",  name:"Or",     col:"#e8c24a" },
+  { k:"spike", name:"Spike",  col:"#3fe0c8" },
+];
+const matCol = (k) => (MATS.find(m => m.k === k) || MATS[0]).col;
+const PROPS = [
+  { k:"lantern", name:"Lanterne", col:"#ffd98a" },
+  { k:"bush",    name:"Plante",   col:"#4a9a52" },
+  { k:"barrel",  name:"Tonneau",  col:"#6f5636" },
+  { k:"arch",    name:"Arche",    col:"#9c6b4a" },
+];
+const propCol = (k) => (PROPS.find(p => p.k === k) || PROPS[0]).col;
+const LS_KEY = "valotiz_maps";
+
+// ===== état =====
+let map = blankMap();
+let tool = "select";
+let curMat = "crate";
+let curProp = "lantern";
+let sel = null;                 // objet sélectionné {ref, type}
+const hist = []; let histI = -1;
+const view = { ox: 0, oz: 0, scale: 5.2 };   // px par unité monde
+
+function blankMap() {
+  return {
+    name: "Nouvelle map", theme: "pearl", team: 5,
+    spawns: { att: { x: 0, z: 56, yaw: 0 }, def: { x: 0, z: -56, yaw: Math.PI } },
+    sites: [{ x: 26, z: -4, label: "A" }, { x: -26, z: -4, label: "B" }],
+    blocks: [{ x: 0, z: 0, w: 20, d: 30, h: 5, rot: 0, mat: "wall" }],
+    props: [], lights: [],
+  };
+}
+function pearlTemplate() {
+  const b = (x, z, w, d, h, mat) => ({ x, z, w, d, h, rot: 0, mat: mat || "wall" });
+  const crates = [[28,6,3,3],[20,-2,2.6,2.6],[30,-10,3,2.2],[24,-24,3.2,2.4],[-28,6,3,3],[-20,-2,2.6,2.6],[-30,-10,3,2.2],[-24,-24,3.2,2.4],
+    [0,22,7,2],[0,-22,7,2],[14,-6,3,3],[-14,-6,3,3],[16,54,3,3],[-16,54,3,3],[16,-54,3,3],[-16,-54,3,3],[30,14,3,3],[-30,14,3,3],[30,-14,3,3],[-30,-14,3,3],[0,30,4,2.4],[0,-30,4,2.4]];
+  return {
+    name: "Pearl (copie)", theme: "pearl", team: 5,
+    spawns: { att: { x: 0, z: 56, yaw: 0 }, def: { x: 0, z: -56, yaw: Math.PI } },
+    sites: [{ x: 26, z: -4, label: "A" }, { x: -26, z: -4, label: "B" }],
+    blocks: [ b(0,0,20,30,5), b(18,25,16,2,5), b(34,0,2,22,5), b(-18,30,22,2,5), b(-34,0,2,22,5),
+      ...crates.map(c => b(c[0],c[1],c[2],c[3],1.3,"crate")) ],
+    props: [ {k:"lantern",x:10.3,z:-8},{k:"lantern",x:10.3,z:8},{k:"lantern",x:-10.3,z:-8},{k:"lantern",x:-10.3,z:8},
+      {k:"bush",x:11,z:20},{k:"bush",x:-11,z:20},{k:"bush",x:11,z:-20},{k:"bush",x:-11,z:-20},{k:"barrel",x:22,z:10},{k:"barrel",x:-22,z:10} ],
+    lights: [],
+  };
+}
+
+// ===== historique (undo/redo) =====
+function snapshot() {
+  const s = JSON.stringify(map);
+  if (hist[histI] === s) return;
+  hist.splice(histI + 1); hist.push(s); histI = hist.length - 1;
+  if (hist.length > 80) { hist.shift(); histI--; }
+}
+function undo() { if (histI > 0) { histI--; map = JSON.parse(hist[histI]); sel = null; syncHeader(); draw(); renderProps(); } }
+function redo() { if (histI < hist.length - 1) { histI++; map = JSON.parse(hist[histI]); sel = null; syncHeader(); draw(); renderProps(); } }
+
+// ===== canvas 2D =====
+const cv = document.getElementById("c2d"), ctx = cv.getContext("2d");
+function resize() { const r = cv.getBoundingClientRect(); cv.width = r.width * devicePixelRatio; cv.height = r.height * devicePixelRatio; ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); draw(); }
+addEventListener("resize", resize);
+function W() { return cv.width / devicePixelRatio; }
+function H() { return cv.height / devicePixelRatio; }
+// monde -> écran ; on centre l'arène, z vers le bas
+function sx(x) { return W() / 2 + (x + view.ox) * view.scale; }
+function sz(z) { return H() / 2 + (z + view.oz) * view.scale; }
+function wx(px) { return (px - W() / 2) / view.scale - view.ox; }
+function wz(py) { return (py - H() / 2) / view.scale - view.oz; }
+
+function draw() {
+  ctx.clearRect(0, 0, W(), H());
+  // fond + arène
+  ctx.fillStyle = "#0a0f18"; ctx.fillRect(0, 0, W(), H());
+  const x0 = sx(-MAPX), x1 = sx(MAPX), z0 = sz(-MAPZ), z1 = sz(MAPZ);
+  ctx.fillStyle = map.theme === "haven" ? "#2a2a22" : "#13232a"; ctx.fillRect(x0, z0, x1 - x0, z1 - z0);
+  // grille
+  ctx.strokeStyle = "#1d2c3d"; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = -MAPX; x <= MAPX; x += 4) { ctx.moveTo(sx(x), z0); ctx.lineTo(sx(x), z1); }
+  for (let z = -MAPZ; z <= MAPZ; z += 4) { ctx.moveTo(x0, sz(z)); ctx.lineTo(x1, sz(z)); }
+  ctx.stroke();
+  // ligne médiane
+  ctx.strokeStyle = "#2b4f5a"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, sz(0)); ctx.lineTo(x1, sz(0)); ctx.stroke();
+  // bordure arène
+  ctx.strokeStyle = "#3a5668"; ctx.lineWidth = 3; ctx.strokeRect(x0, z0, x1 - x0, z1 - z0);
+  // sites
+  for (const s of map.sites) {
+    ctx.fillStyle = s.label === "B" ? "rgba(74,160,255,.18)" : "rgba(63,208,160,.18)";
+    ctx.strokeStyle = s.label === "B" ? "#4aa0ff" : "#3fd0a0"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(sx(s.x), sz(s.z), 3.6 * view.scale, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 20px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(s.label, sx(s.x), sz(s.z));
+  }
+  // blocs
+  for (const b of map.blocks) drawBlock(b);
+  // props
+  for (const p of map.props) { ctx.fillStyle = propCol(p.k); ctx.beginPath(); ctx.arc(sx(p.x), sz(p.z), Math.max(5, 0.9 * view.scale), 0, 7); ctx.fill(); ctx.strokeStyle = "#0008"; ctx.stroke(); }
+  // lumières
+  for (const l of map.lights) { ctx.fillStyle = "#ffe08a"; ctx.beginPath(); ctx.arc(sx(l.x), sz(l.z), 5, 0, 7); ctx.fill(); ctx.strokeStyle = "#a80"; ctx.stroke(); }
+  // spawns
+  drawSpawn(map.spawns.att, "#5fe0f0", "ATT");
+  drawSpawn(map.spawns.def, "#ff7a7a", "DEF");
+  // poignées de sélection
+  if (sel && sel.type === "block") drawHandles(sel.ref);
+}
+function drawBlock(b) {
+  ctx.save();
+  ctx.translate(sx(b.x), sz(b.z)); ctx.rotate((b.rot || 0) * Math.PI / 180);
+  const w = b.w * view.scale, d = b.d * view.scale;
+  const tall = b.h >= 2;
+  ctx.fillStyle = matCol(b.mat) + (tall ? "" : "cc");
+  ctx.fillRect(-w / 2, -d / 2, w, d);
+  ctx.strokeStyle = (sel && sel.ref === b) ? "#fff" : "rgba(0,0,0,.5)"; ctx.lineWidth = (sel && sel.ref === b) ? 2.5 : 1.5;
+  ctx.strokeRect(-w / 2, -d / 2, w, d);
+  if (!tall) { ctx.strokeStyle = "rgba(255,255,255,.3)"; ctx.lineWidth = 1; ctx.strokeRect(-w / 2 + 3, -d / 2 + 3, w - 6, d - 6); }
+  ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  if (w > 26 && d > 16) ctx.fillText("H " + b.h, 0, 0);
+  ctx.restore();
+}
+function drawSpawn(sp, col, label) {
+  const x = sx(sp.x), z = sz(sp.z);
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, z, 9, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+  // direction (yaw : 0 = +z)
+  ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, z);
+  ctx.lineTo(x + Math.sin(sp.yaw) * 20, z + Math.cos(sp.yaw) * 20); ctx.stroke();
+  ctx.fillStyle = "#fff"; ctx.font = "bold 10px system-ui"; ctx.textAlign = "center"; ctx.fillText(label, x, z - 14);
+}
+function drawHandles(b) {
+  ctx.save(); ctx.translate(sx(b.x), sz(b.z)); ctx.rotate((b.rot || 0) * Math.PI / 180);
+  const w = b.w * view.scale, d = b.d * view.scale;
+  const pts = [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]];
+  ctx.fillStyle = "#fff"; for (const [px, py] of pts) { ctx.fillRect(px - 4, py - 4, 8, 8); }
+  // poignée rotation
+  ctx.strokeStyle = "#fff"; ctx.beginPath(); ctx.moveTo(0, -d/2); ctx.lineTo(0, -d/2 - 22); ctx.stroke();
+  ctx.fillStyle = "#38d6c6"; ctx.beginPath(); ctx.arc(0, -d/2 - 22, 6, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+// ===== interactions =====
+let drag = null;   // {mode, ...}
+const snapV = (v, g) => Math.round(v / g) * g;
+function hitBlock(mx, mz) {
+  for (let i = map.blocks.length - 1; i >= 0; i--) {
+    const b = map.blocks[i]; const r = -(b.rot || 0) * Math.PI / 180;
+    const dx = mx - b.x, dz = mz - b.z;
+    const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
+    if (Math.abs(lx) <= b.w / 2 && Math.abs(lz) <= b.d / 2) return b;
+  }
+  return null;
+}
+function handleAt(b, px, py) {       // renvoie "nw/ne/se/sw/rot" si proche d'une poignée
+  const r = (b.rot || 0) * Math.PI / 180, cx = sx(b.x), cz = sz(b.z);
+  const w = b.w * view.scale, d = b.d * view.scale;
+  const corners = { nw:[-w/2,-d/2], ne:[w/2,-d/2], se:[w/2,d/2], sw:[-w/2,d/2], rot:[0,-d/2-22] };
+  for (const k in corners) {
+    const [lx, ly] = corners[k];
+    const gx = cx + lx * Math.cos(r) - ly * Math.sin(r), gy = cz + lx * Math.sin(r) + ly * Math.cos(r);
+    if (Math.hypot(px - gx, py - gy) < 10) return k;
+  }
+  return null;
+}
+cv.addEventListener("contextmenu", e => e.preventDefault());
+cv.addEventListener("wheel", e => { e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 1 / 1.12; view.scale = Math.max(2, Math.min(20, view.scale * f)); draw(); }, { passive: false });
+cv.addEventListener("mousedown", e => {
+  const px = e.offsetX, py = e.offsetY, mx = wx(px), mz = wz(py);
+  if (e.button === 2 || tool === "pan") { drag = { mode: "pan", px, py, ox: view.ox, oz: view.oz }; return; }
+  const g = 1;
+  if (tool === "select") {
+    if (sel && sel.type === "block") { const h = handleAt(sel.ref, px, py); if (h) { drag = { mode: h === "rot" ? "rot" : "resize", h, b: sel.ref }; return; } }
+    const b = hitBlock(mx, mz);
+    if (b) { sel = { type: "block", ref: b }; drag = { mode: "move", b, dx: mx - b.x, dz: mz - b.z }; renderProps(); draw(); return; }
+    // sélection spawn/site/prop ?
+    const near = pickMarker(mx, mz);
+    sel = near; drag = near ? { mode: "movemk", mk: near, dx: mx - near.ref.x, dz: mz - near.ref.z } : null;
+    renderProps(); draw(); return;
+  }
+  if (tool === "wall" || tool === "crate" || tool === "box") {
+    const nb = { x: snapV(mx, g), z: snapV(mz, g), w: 1, d: 1, h: tool === "crate" ? 1.3 : tool === "wall" ? 5 : 2.4, rot: 0, mat: tool === "crate" ? "crate" : curMat };
+    drag = { mode: "create", b: nb, ox: snapV(mx, g), oz: snapV(mz, g) };
+    return;
+  }
+  if (tool === "spawnA") { map.spawns.att.x = snapV(mx, g); map.spawns.att.z = snapV(mz, g); commit(); return; }
+  if (tool === "spawnD") { map.spawns.def.x = snapV(mx, g); map.spawns.def.z = snapV(mz, g); commit(); return; }
+  if (tool === "site") { const label = map.sites.length % 2 ? "B" : "A"; const s = { x: snapV(mx, g), z: snapV(mz, g), label }; map.sites.push(s); sel = { type: "site", ref: s }; commit(); return; }
+  if (tool === "prop") { const p = { k: curProp, x: snapV(mx, g), z: snapV(mz, g) }; map.props.push(p); sel = { type: "prop", ref: p }; commit(); return; }
+  if (tool === "light") { const l = { x: snapV(mx, g), z: snapV(mz, g), y: 3 }; map.lights.push(l); sel = { type: "light", ref: l }; commit(); return; }
+  if (tool === "del") { const b = hitBlock(mx, mz); if (b) { map.blocks.splice(map.blocks.indexOf(b), 1); sel = null; commit(); return; } const mk = pickMarker(mx, mz); if (mk) { removeMarker(mk); sel = null; commit(); } return; }
+});
+addEventListener("mousemove", e => {
+  if (!drag) return;
+  const rect = cv.getBoundingClientRect(); const px = e.clientX - rect.left, py = e.clientY - rect.top;
+  const mx = wx(px), mz = wz(py), g = 1;
+  if (drag.mode === "pan") { view.ox = drag.ox + (px - drag.px) / view.scale; view.oz = drag.oz + (py - drag.py) / view.scale; draw(); return; }
+  if (drag.mode === "move") { drag.b.x = snapV(mx - drag.dx, g); drag.b.z = snapV(mz - drag.dz, g); draw(); renderProps(); return; }
+  if (drag.mode === "movemk") { drag.mk.ref.x = snapV(mx - drag.dx, g); drag.mk.ref.z = snapV(mz - drag.dz, g); draw(); renderProps(); return; }
+  if (drag.mode === "create") { const b = drag.b; b.x = (drag.ox + snapV(mx, g)) / 2; b.z = (drag.oz + snapV(mz, g)) / 2; b.w = Math.max(1, Math.abs(snapV(mx, g) - drag.ox)); b.d = Math.max(1, Math.abs(snapV(mz, g) - drag.oz)); draw(); drawPreview(b); return; }
+  if (drag.mode === "resize") { resizeBlock(drag.b, drag.h, mx, mz); draw(); renderProps(); return; }
+  if (drag.mode === "rot") { const a = Math.atan2(mz - drag.b.z, mx - drag.b.x); let deg = a * 180 / Math.PI + 90; deg = Math.round(deg / 15) * 15; drag.b.rot = ((deg % 360) + 360) % 360; draw(); renderProps(); return; }
+});
+addEventListener("mouseup", () => {
+  if (!drag) return;
+  if (drag.mode === "create") { if (drag.b.w >= 1 && drag.b.d >= 1) { map.blocks.push(drag.b); sel = { type: "block", ref: drag.b }; commit(); } }
+  else if (["move","movemk","resize","rot"].includes(drag.mode)) commit();
+  drag = null;
+});
+function drawPreview(b) { ctx.save(); ctx.translate(sx(b.x), sz(b.z)); ctx.strokeStyle = "#38d6c6"; ctx.lineWidth = 2; ctx.strokeRect(-b.w*view.scale/2, -b.d*view.scale/2, b.w*view.scale, b.d*view.scale); ctx.restore(); }
+function resizeBlock(b, h, mx, mz) {
+  // redimensionne symétriquement autour du centre, en coordonnées locales au bloc
+  const r = -(b.rot || 0) * Math.PI / 180;
+  const dx = mx - b.x, dz = mz - b.z;
+  const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
+  b.w = Math.max(1, Math.round(Math.abs(lx) * 2));
+  b.d = Math.max(1, Math.round(Math.abs(lz) * 2));
+}
+function pickMarker(mx, mz) {
+  const near = (o) => Math.hypot(o.x - mx, o.z - mz) < 2.4;
+  if (near(map.spawns.att)) return { type: "spawn", ref: map.spawns.att, which: "att" };
+  if (near(map.spawns.def)) return { type: "spawn", ref: map.spawns.def, which: "def" };
+  for (const s of map.sites) if (near(s)) return { type: "site", ref: s };
+  for (const p of map.props) if (near(p)) return { type: "prop", ref: p };
+  for (const l of map.lights) if (near(l)) return { type: "light", ref: l };
+  return null;
+}
+function removeMarker(mk) {
+  if (mk.type === "site") map.sites.splice(map.sites.indexOf(mk.ref), 1);
+  else if (mk.type === "prop") map.props.splice(map.props.indexOf(mk.ref), 1);
+  else if (mk.type === "light") map.lights.splice(map.lights.indexOf(mk.ref), 1);
+}
+function commit() { snapshot(); draw(); renderProps(); }
+
+// ===== panneau de propriétés =====
+const $ = (id) => document.getElementById(id);
+function numRow(label, val, step, on) {
+  const r = document.createElement("div"); r.className = "row";
+  r.innerHTML = `<label>${label}</label><input type="number" step="${step}" value="${val}">`;
+  r.querySelector("input").addEventListener("input", e => { on(parseFloat(e.target.value) || 0); draw(); });
+  r.querySelector("input").addEventListener("change", () => snapshot());
+  return r;
+}
+function renderProps() {
+  const box = $("props"); box.innerHTML = ""; const mc = $("matCard");
+  if (!sel) { box.innerHTML = '<div class="muted">Rien de sélectionné.</div>'; mc.style.display = "none"; return; }
+  const t = sel.type, o = sel.ref;
+  const head = document.createElement("div"); head.className = "muted"; head.style.marginBottom = "6px";
+  head.textContent = { block: "Bloc", site: "Site", spawn: "Spawn", prop: "Décor", light: "Lumière" }[t];
+  box.appendChild(head);
+  if (t === "block") {
+    box.appendChild(numRow("X", o.x, 0.5, v => o.x = v));
+    box.appendChild(numRow("Z", o.z, 0.5, v => o.z = v));
+    box.appendChild(numRow("Largeur", o.w, 0.5, v => o.w = Math.max(0.5, v)));
+    box.appendChild(numRow("Profond.", o.d, 0.5, v => o.d = Math.max(0.5, v)));
+    box.appendChild(numRow("Hauteur", o.h, 0.1, v => o.h = Math.max(0.3, v)));
+    box.appendChild(numRow("Rotation", o.rot || 0, 15, v => o.rot = v));
+    mc.style.display = ""; renderMats(o);
+  } else if (t === "site") {
+    box.appendChild(numRow("X", o.x, 0.5, v => o.x = v)); box.appendChild(numRow("Z", o.z, 0.5, v => o.z = v));
+    const r = document.createElement("div"); r.className = "row"; r.innerHTML = `<label>Libellé</label><select><option${o.label==="A"?" selected":""}>A</option><option${o.label==="B"?" selected":""}>B</option></select>`;
+    r.querySelector("select").onchange = e => { o.label = e.target.value; snapshot(); draw(); }; box.appendChild(r); mc.style.display = "none";
+  } else if (t === "spawn") {
+    box.appendChild(numRow("X", o.x, 0.5, v => o.x = v)); box.appendChild(numRow("Z", o.z, 0.5, v => o.z = v));
+    box.appendChild(numRow("Orient.°", Math.round((o.yaw||0)*180/Math.PI), 15, v => o.yaw = v*Math.PI/180)); mc.style.display = "none";
+  } else if (t === "prop") {
+    const r = document.createElement("div"); r.className = "row"; r.innerHTML = `<label>Type</label><select>${PROPS.map(p=>`<option value="${p.k}"${o.k===p.k?" selected":""}>${p.name}</option>`).join("")}</select>`;
+    r.querySelector("select").onchange = e => { o.k = e.target.value; snapshot(); draw(); }; box.appendChild(r);
+    box.appendChild(numRow("X", o.x, 0.5, v => o.x = v)); box.appendChild(numRow("Z", o.z, 0.5, v => o.z = v)); mc.style.display = "none";
+  } else if (t === "light") {
+    box.appendChild(numRow("X", o.x, 0.5, v => o.x = v)); box.appendChild(numRow("Z", o.z, 0.5, v => o.z = v)); box.appendChild(numRow("Hauteur", o.y||3, 0.5, v => o.y = v)); mc.style.display = "none";
+  }
+  const del = document.createElement("button"); del.className = "btn warn"; del.style.marginTop = "8px"; del.textContent = "Supprimer"; del.style.width = "100%";
+  del.onclick = () => { deleteSel(); }; box.appendChild(del);
+}
+function renderMats(b) {
+  const m = $("mats"); m.innerHTML = "";
+  for (const mt of MATS) { const d = document.createElement("div"); d.className = "mat" + (b.mat === mt.k ? " on" : ""); d.style.background = mt.col; d.textContent = mt.name; d.onclick = () => { b.mat = mt.k; curMat = mt.k; snapshot(); draw(); renderProps(); }; m.appendChild(d); }
+}
+function deleteSel() {
+  if (!sel) return;
+  if (sel.type === "block") map.blocks.splice(map.blocks.indexOf(sel.ref), 1);
+  else if (sel.type !== "spawn") removeMarker(sel);
+  sel = null; commit();
+}
+
+// ===== outils =====
+const TOOLS = [
+  { k:"select", ic:"⬚", n:"Sélec." }, { k:"wall", ic:"▬", n:"Mur" }, { k:"crate", ic:"▪", n:"Caisse" }, { k:"box", ic:"◼", n:"Bloc" },
+  { k:"spawnA", ic:"🔵", n:"Spawn A" }, { k:"spawnD", ic:"🔴", n:"Spawn D" }, { k:"site", ic:"◈", n:"Site" },
+  { k:"prop", ic:"🌿", n:"Décor" }, { k:"light", ic:"💡", n:"Lumière" }, { k:"del", ic:"🗑", n:"Effacer" },
+];
+function buildTools() {
+  const t = $("tools"); t.innerHTML = "";
+  for (const tl of TOOLS) { const b = document.createElement("div"); b.className = "tool" + (tool === tl.k ? " on" : ""); b.innerHTML = `<span class="ic">${tl.ic}</span>${tl.n}`; b.onclick = () => { tool = tl.k; buildTools(); updateHint(); }; t.appendChild(b); }
+  // sous-choix décor
+  if (tool === "prop") { const sel2 = document.createElement("select"); sel2.style.cssText = "width:50px;font-size:10px;margin-top:4px"; sel2.innerHTML = PROPS.map(p => `<option value="${p.k}"${curProp===p.k?" selected":""}>${p.name}</option>`).join(""); sel2.onchange = e => curProp = e.target.value; t.appendChild(sel2); }
+}
+function updateHint() {
+  const H = { select: "Clique un bloc pour le sélectionner · glisse pour déplacer · poignées pour redimensionner/tourner", wall: "Glisse pour tracer un mur", crate: "Glisse pour poser une caisse (basse)", box: "Glisse pour un bloc", spawnA: "Clique = position du spawn attaque", spawnD: "Clique = position du spawn défense", site: "Clique = ajouter un site (A/B alterné)", prop: "Clique = poser un décor", light: "Clique = poser une lumière", del: "Clique un élément pour l'effacer" };
+  $("hint").textContent = H[tool] || "";
+}
+
+// ===== en-tête / sync =====
+function syncHeader() { $("mapName").value = map.name; $("mapTheme").value = map.theme; $("mapTeam").value = map.team; }
+$("mapName").oninput = e => { map.name = e.target.value; };
+$("mapName").onchange = () => snapshot();
+$("mapTheme").onchange = e => { map.theme = e.target.value; snapshot(); draw(); };
+$("mapTeam").onchange = e => { map.team = +e.target.value; snapshot(); };
+
+// ===== sauvegarde / maps =====
+function loadStore() { try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; } }
+function saveStore(s) { try { localStorage.setItem(LS_KEY, JSON.stringify(s)); } catch (e) { toast("Stockage indisponible"); } }
+function saveMap() { if (!map.name.trim()) { toast("Donne un nom à la map"); return; } const s = loadStore(); s[map.name] = JSON.parse(JSON.stringify(map)); saveStore(s); renderMapList(); toast("« " + map.name + " » sauvegardée"); }
+function renderMapList() {
+  const box = $("maplist"); const s = loadStore(); const names = Object.keys(s);
+  if (!names.length) { box.innerHTML = '<div class="muted">Aucune map sauvegardée.</div>'; return; }
+  box.innerHTML = "";
+  for (const n of names) {
+    const row = document.createElement("div"); row.className = "maprow";
+    row.innerHTML = `<span>${n}</span>`;
+    const load = document.createElement("button"); load.className = "btn mini"; load.textContent = "Ouvrir"; load.onclick = () => { map = JSON.parse(JSON.stringify(s[n])); sel = null; hist.length = 0; histI = -1; snapshot(); syncHeader(); draw(); renderProps(); toast("Chargée"); };
+    const del = document.createElement("button"); del.className = "btn mini warn"; del.textContent = "✕"; del.onclick = () => { const st = loadStore(); delete st[n]; saveStore(st); renderMapList(); };
+    row.appendChild(load); row.appendChild(del); box.appendChild(row);
+  }
+}
+
+// ===== export / import =====
+$("bExport").onclick = () => { const blob = new Blob([JSON.stringify(map, null, 2)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = (map.name || "map").replace(/[^a-z0-9_-]+/gi, "_") + ".valotiz.json"; a.click(); };
+$("bImport").onclick = () => $("fileIn").click();
+$("fileIn").onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const d = JSON.parse(rd.result); if (!d.blocks) throw 0; map = normalize(d); sel = null; hist.length = 0; histI = -1; snapshot(); syncHeader(); draw(); renderProps(); toast("Map importée"); } catch { toast("Fichier invalide"); } }; rd.readAsText(f); e.target.value = ""; };
+function normalize(d) {
+  d.theme = d.theme || "pearl"; d.team = d.team || 5; d.name = d.name || "Map importée";
+  d.spawns = d.spawns || blankMap().spawns; d.sites = d.sites || []; d.blocks = d.blocks || []; d.props = d.props || []; d.lights = d.lights || [];
+  return d;
+}
+
+// ===== boutons =====
+$("bNew").onclick = () => { map = blankMap(); sel = null; hist.length = 0; histI = -1; snapshot(); syncHeader(); draw(); renderProps(); };
+$("bTpl").onclick = () => { map = pearlTemplate(); sel = null; hist.length = 0; histI = -1; snapshot(); syncHeader(); draw(); renderProps(); toast("Modèle Pearl chargé"); };
+$("bClear").onclick = () => { map.blocks = []; map.props = []; map.lights = []; sel = null; commit(); };
+$("bSave").onclick = saveMap;
+$("bPlay").onclick = () => { saveMap(); const s = loadStore(); s["__play__"] = JSON.parse(JSON.stringify(map)); saveStore(s); location.href = "index.html?play=" + encodeURIComponent(map.name); };
+
+// ===== aperçu 3D =====
+let pv = null;
+$("bPrev").onclick = () => { $("prev").classList.add("on"); if (!pv) pv = new Preview($("pv")); pv.build(map); pv.start(); };
+$("bClosePrev").onclick = () => { $("prev").classList.remove("on"); if (pv) pv.stop(); };
+class Preview {
+  constructor(canvas) {
+    this.r = new THREE.WebGLRenderer({ canvas, antialias: true }); this.r.setSize(860, 560, false); this.r.outputColorSpace = THREE.SRGBColorSpace;
+    this.sc = new THREE.Scene(); this.cam = new THREE.PerspectiveCamera(55, 860 / 560, 0.1, 600);
+    this.sc.add(new THREE.HemisphereLight(0xcfe4ea, 0x55606a, 1.1)); const d = new THREE.DirectionalLight(0xffffff, 1.1); d.position.set(40, 70, 30); this.sc.add(d);
+    this.rot = 0; this.dist = 110; this.drag = false; this.anim = this.anim.bind(this);
+    canvas.addEventListener("mousedown", () => this.drag = true); addEventListener("mouseup", () => this.drag = false);
+    addEventListener("mousemove", e => { if (this.drag) { this.rot += e.movementX * 0.01; } });
+    canvas.addEventListener("wheel", e => { e.preventDefault(); this.dist = Math.max(40, Math.min(260, this.dist + e.deltaY * 0.1)); }, { passive: false });
+  }
+  build(map) {
+    if (this.g) this.sc.remove(this.g); this.g = new THREE.Group(); this.sc.add(this.g);
+    this.sc.background = new THREE.Color(map.theme === "haven" ? 0x9db4c4 : 0x4a8794);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAPX * 2, MAPZ * 2), new THREE.MeshStandardMaterial({ color: map.theme === "haven" ? 0xcdbf9e : 0x98a4a8 })); floor.rotation.x = -Math.PI / 2; this.g.add(floor);
+    const perim = [[-MAPZ,-MAPX,MAPX,"x"],[MAPZ,-MAPX,MAPX,"x"],[-MAPX,-MAPZ,MAPZ,"z"],[MAPX,-MAPZ,MAPZ,"z"]];
+    for (const [a,p0,p1,ax] of perim) { const len = p1 - p0; const w = ax === "x" ? len : 1.6, d = ax === "x" ? 1.6 : len; const m = new THREE.Mesh(new THREE.BoxGeometry(w, 5, d), new THREE.MeshStandardMaterial({ color: 0xaeb8bb })); m.position.set(ax === "x" ? (p0 + p1) / 2 : a, 2.5, ax === "x" ? a : (p0 + p1) / 2); this.g.add(m); }
+    for (const b of map.blocks) { const m = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), new THREE.MeshStandardMaterial({ color: new THREE.Color(matCol(b.mat)) })); m.position.set(b.x, b.h / 2, b.z); m.rotation.y = (b.rot || 0) * Math.PI / 180; this.g.add(m); }
+    for (const s of map.sites) { const r = new THREE.Mesh(new THREE.RingGeometry(3.4, 3.8, 32), new THREE.MeshBasicMaterial({ color: s.label === "B" ? 0x4aa0ff : 0x3fd0a0, side: THREE.DoubleSide, transparent: true, opacity: .5 })); r.rotation.x = -Math.PI / 2; r.position.set(s.x, 0.1, s.z); this.g.add(r); }
+    for (const p of map.props) { const col = new THREE.Color(propCol(p.k)); const m = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 7), new THREE.MeshStandardMaterial({ color: col })); m.position.set(p.x, 1, p.z); this.g.add(m); }
+  }
+  anim() { if (!this.on) return; this.rot += this.drag ? 0 : 0.0016; const x = Math.sin(this.rot) * this.dist, z = Math.cos(this.rot) * this.dist; this.cam.position.set(x, this.dist * 0.75, z); this.cam.lookAt(0, 0, 0); this.r.render(this.sc, this.cam); requestAnimationFrame(this.anim); }
+  start() { this.on = true; this.anim(); } stop() { this.on = false; }
+}
+
+// ===== toast =====
+let toastT;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 1800); }
+
+// ===== clavier =====
+addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.key === "Delete" || e.key === "Backspace") { deleteSel(); e.preventDefault(); }
+  else if (e.ctrlKey && e.key === "z") { undo(); e.preventDefault(); }
+  else if (e.ctrlKey && (e.key === "y" || (e.shiftKey && e.key === "Z"))) { redo(); e.preventDefault(); }
+  else if (e.key === "v") { tool = "select"; buildTools(); updateHint(); }
+});
+
+// ===== init =====
+buildTools(); updateHint(); syncHeader(); snapshot(); renderMapList();
+resize();
+</script>
+</body>
+</html>

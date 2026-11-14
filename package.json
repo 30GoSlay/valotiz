@@ -1,0 +1,17 @@
+{
+  "name": "avatar-tactique",
+  "version": "0.2.0",
+  "type": "module",
+  "private": true,
+  "description": "FPS tactique 3D (à la Valorant) avec sprites 2D (billboards) utilisant les avatars Chapaland/Chapatiz. Multijoueur WebSocket (zéro dépendance).",
+  "scripts": {
+    "avatars": "node avatars/gen.mjs",
+    "serve": "node serve.mjs",
+    "server": "node server.mjs"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0",
+    "playwright": "^1.48.0",
+    "@ruffle-rs/ruffle": "^0.7.1"
+  }
+}

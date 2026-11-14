@@ -1,0 +1,15 @@
+[Unit]
+Description=VALOTIZ - serveur temps reel WebSocket
+After=network.target
+
+[Service]
+Type=simple
+User=valotiz
+WorkingDirectory=/opt/valotiz/app
+Environment=WS_PORT=8091
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

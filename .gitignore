@@ -1,0 +1,16 @@
+# dépendances (uniquement utiles à la génération d'avatars, pas au jeu)
+node_modules/
+
+# caches de génération
+.cache/
+**/.cache/
+
+# config locale (chemins machine : LIB/CATALOG pour régénérer les avatars)
+.env
+
+# divers
+*.log
+.DS_Store
+Thumbs.db
+new_lib/
+items.json

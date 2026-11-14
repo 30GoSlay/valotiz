@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>raster</title></head>
+<body style="margin:0;background:#fff">
+<script>
+  window.RufflePlayer = window.RufflePlayer || {};
+  window.RufflePlayer.config = {
+    publicPath: "/ruffle/",
+    autoplay: "on",
+    unmuteOverlay: "hidden",
+    splashScreen: false,
+    allowScriptAccess: true,
+    preferredRenderer: "wgpu-webgl", // le renderer "webgl" ne supporte pas BitmapData.draw
+    letterbox: "off",
+    contextMenu: "off",
+    warnOnUnsupportedContent: false,
+    logLevel: "warn",
+    // Ruffle coupe un script AS3 après 15 s par défaut : sur GPU logiciel, un atlas "big" lourd (24 frames de Jump,
+    // dégradés…) peut dépasser, le rendu échouait alors en silence jusqu'au timeout. Le timeout côté Node (30 s) prime.
+    maxExecutionDuration: 120,
+  };
+
+  // rasterizer.swf en mode serveur : il reste chargé (avec les SWF d'items en mémoire)
+  // et reçoit chaque demande via player.render(json).
+  let player = null, seq = 0, onReady = null;
+  const pending = new Map();
+  window.__rasterReady = () => onReady && onReady();
+  window.__rasterDone = (id, meta, w, h, b64, format) => { const p = pending.get(id); if (p) { pending.delete(id); p.resolve({ meta, w, h, b64, format }); } };
+  window.__rasterError = (id, msg) => {
+    const p = id != null ? pending.get(id) : [...pending.values()][0];
+    if (p) { pending.delete(p.id); p.reject(new Error(String(msg))); }
+  };
+
+  // Mise en veille entre deux rendus : sans ça, Ruffle re-rend le stage à 60 fps en continu (autoplay),
+  // ce qui, sur GPU logiciel (SwiftShader), pegge un cœur PAR lecteur même à vide. ruffle().suspend() coupe
+  // le rendu (0 appel WebGL vérifié) tout en gardant le SWF chargé ; resume() le relance avant chaque rendu.
+  // Compteur « active » : un lecteur ne traite qu'un rendu à la fois, mais on reste robuste à tout chevauchement.
+  // Suspendre DOIT être différé : appelé en plein callback de démarrage ou juste après un rendu, Ruffle est
+  // encore en train de dessiner et re-déclenche sa boucle, la suspension ne tient pas. Un setTimeout(…, 0),
+  // après le tick courant et seulement si aucun rendu n'est en cours (active === 0), suspend durablement
+  // (0 appel WebGL vérifié). resume() annule une suspension en attente et réveille immédiatement.
+  let rfl = null, active = 0, suspT = null;
+  const rflApi = () => { try { return rfl || (rfl = (typeof player.ruffle === "function" ? player.ruffle() : player)); } catch { return null; } };
+  const scheduleSuspend = () => { clearTimeout(suspT); suspT = setTimeout(() => { if (active === 0) { try { rflApi()?.suspend?.(); } catch {} } }, 0); };
+  const resume = () => { active++; clearTimeout(suspT); try { rflApi()?.resume?.(); } catch {} };
+  const settle = () => { if (--active <= 0) { active = 0; scheduleSuspend(); } };
+
+  window.boot = (timeoutMs) => new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("boot timeout")), timeoutMs || 30000);
+    onReady = () => { clearTimeout(t); scheduleSuspend(); resolve(true); }; // prêt : mise en veille (différée)
+    player = window.RufflePlayer.newest().createPlayer();
+    player.style.width = "800px";
+    player.style.height = "600px";
+    document.body.appendChild(player);
+    const api = typeof player.ruffle === "function" ? player.ruffle() : player;
+    api.load({ url: "/rasterizer.swf", parameters: { server: "1" }, allowScriptAccess: true });
+  });
+
+  window.renderAvatar = (params, timeoutMs) => new Promise((resolve, reject) => {
+    const id = String(++seq);
+    resume(); // réveille Ruffle le temps du rendu
+    const t = setTimeout(() => { pending.delete(id); settle(); reject(new Error("timeout")); }, timeoutMs || 30000);
+    pending.set(id, {
+      id,
+      resolve: (v) => { clearTimeout(t); settle(); resolve(v); },
+      reject: (e) => { clearTimeout(t); settle(); reject(e); },
+    });
+    player.render(JSON.stringify({ ...params, id }));
+  });
+</script>
+<script src="/ruffle/ruffle.js"></script>
+</body>
+</html>

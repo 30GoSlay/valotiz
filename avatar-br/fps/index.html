@@ -1,0 +1,1411 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Avatar Tactique — FPS</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: #0b1020; font-family: "Titillium Web", system-ui, sans-serif; color: #eaf2ff; }
+  #cv { display: block; width: 100vw; height: 100vh; }
+  .hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  /* ---- bandeau du haut (équipes + timer) type Valorant ---- */
+  .topbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; background: rgba(8,14,30,.74); border-radius: 12px; padding: 6px; backdrop-filter: blur(5px); box-shadow: 0 4px 18px rgba(0,0,0,.3); }
+  .tteam { display: flex; gap: 5px; align-items: center; padding: 0 8px; }
+  .tteam.en { flex-direction: row-reverse; }
+  .tp { position: relative; width: 38px; }
+  .tp .pic { width: 38px; height: 38px; border-radius: 7px; background: #0c1526 center/cover no-repeat; display: block; border: 2px solid transparent; }
+  .tteam.att .tp .pic { border-color: rgba(79,211,230,.55); } .tteam.en .tp .pic { border-color: rgba(255,106,106,.55); }
+  .tp .hpbar { position: absolute; left: 2px; right: 2px; bottom: -4px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .tp .hpfill { height: 100%; width: 100%; background: #6ee68a; transition: width .12s; }
+  .tteam.en .tp .hpfill { background: #ff7a7a; }
+  .tp.dead .pic { filter: grayscale(1) brightness(.4); }
+  .tp.dead::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #ff6a6a; font-weight: 900; font-size: 20px; }
+  .tp.me .pic { box-shadow: 0 0 0 2px #ffd34d; }
+  .tmid { display: flex; align-items: center; gap: 14px; padding: 0 14px; }
+  .tscore { font-weight: 900; font-size: 26px; min-width: 24px; text-align: center; } .tscore.you { color: #4fd3e6; } .tscore.en { color: #ff6a6a; }
+  .tclockwrap { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .tclock { font-weight: 900; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: 1px; } .tclock.low { color: #ff6a6a; }
+  .tclockwrap .rnd { font-size: 10px; opacity: .55; font-weight: 700; margin-top: 3px; }
+  .timer { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); font-size: 13px; opacity: .8; font-weight: 700; }
+  .spectate { position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: rgba(8,14,30,.7); border: 1px solid rgba(255,255,255,.14); border-radius: 20px; padding: 7px 16px; font-weight: 800; font-size: 14px; letter-spacing: 1px; backdrop-filter: blur(4px); }
+  .spectate[hidden] { display: none; }
+  .spectate b { color: #4fd3e6; } .spectate .spechint { font-size: 11px; font-weight: 600; opacity: .55; letter-spacing: .4px; }
+  .feed { position: absolute; top: 96px; right: 14px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  .kf { display: flex; align-items: center; gap: 8px; background: rgba(10,16,30,.74); border-radius: 6px; padding: 4px 11px; font-weight: 800; font-size: 13.5px; box-shadow: 0 2px 9px rgba(0,0,0,.3); animation: kfIn .26s ease; white-space: nowrap; }
+  .kf.head { background: rgba(72,16,16,.78); }
+  .kf-ic { font-size: 14px; color: #dfe7ee; } .kf.head .kf-ic { color: #ff5f5f; }
+  @keyframes kfIn { from { opacity: 0; transform: translateY(-9px); } to { opacity: 1; transform: translateY(0); } }
+  .cross { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%,-50%); }
+  .cross i { position: absolute; background: #eafff0; box-shadow: 0 0 2px #000; }
+  .cross .h { top: 50%; height: 2px; transform: translateY(-50%); } .cross .v { left: 50%; width: 2px; transform: translateX(-50%); }
+  .cross .l { left: 0; width: 8px; } .cross .r { right: 0; width: 8px; } .cross .t { top: 0; height: 8px; } .cross .b { bottom: 0; height: 8px; }
+  .hitm { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; transform: translate(-50%,-50%) rotate(45deg); opacity: 0; }
+  .hitm i { position: absolute; width: 2px; height: 9px; background: #fff; } .hitm.hs i { background: #ffd45a; }
+  .hitm .a { top: 0; left: 50%; } .hitm .b2 { bottom: 0; left: 50%; } .hitm .c { left: 0; top: 50%; width: 9px; height: 2px; } .hitm .d { right: 0; top: 50%; width: 9px; height: 2px; }
+  .vit { position: absolute; inset: 0; box-shadow: inset 0 0 120px 30px rgba(220,40,40,0); transition: box-shadow .25s; }
+  /* indicateur de dégâts : flash rouge plein écran + marqueur directionnel */
+  .dmgflash { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 180px 60px rgba(230,30,30,.8); background: radial-gradient(ellipse at 50% 100%, rgba(220,20,20,.28), transparent 60%); }
+  .dmgflash.hit { animation: dmgpulse .45s ease-out; }
+  @keyframes dmgpulse { 0% { opacity: 1; } 100% { opacity: 0; } }
+  .dmgind { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .12s; z-index: 30; }
+  .dmgind.show { opacity: 1; }
+  .dmgarc { position: absolute; left: -85px; top: -150px; width: 170px; height: 74px; clip-path: polygon(0 100%, 50% 0, 100% 100%); background: radial-gradient(ellipse at 50% 115%, rgba(255,45,45,.95), rgba(255,45,45,.15) 65%, transparent 78%); filter: drop-shadow(0 0 6px rgba(255,40,40,.8)); }
+  .bottom { position: absolute; left: 20px; bottom: 16px; display: flex; align-items: flex-end; gap: 18px; }
+  .stat { font-weight: 800; }
+  .stat .lab { font-size: 11px; opacity: .6; letter-spacing: 1px; }
+  .hpn { font-size: 30px; color: #7ef09a; } .hpn.low { color: #ff8080; }
+  .armor { font-size: 18px; color: #7fc0ff; }
+  .ammo { position: absolute; right: 22px; bottom: 16px; text-align: right; font-weight: 800; }
+  .ammo .m { font-size: 32px; } .ammo .r { font-size: 16px; opacity: .6; }
+  .ammo.reload .m { color: #ffd45a; }
+  .banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%,-50%); text-align: center; font-size: 40px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 3px 0 #0008; opacity: 0; transition: opacity .3s; }
+  .banner.show { opacity: 1; } .banner.good { color: #8ef0a0; } .banner.bad { color: #ff8aa0; }
+  .banner small { display: block; font-size: 16px; opacity: .8; font-weight: 700; margin-top: 4px; }
+  .panel { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, #152a52, #070b17); pointer-events: auto; }
+  .panel[hidden] { display: none; }
+  /* fond VALOTIZ sur les écrans de menu/lobby/fin */
+  #start, #lobby, #over { background: linear-gradient(rgba(6,10,20,.78), rgba(6,10,20,.9)), url("valotiz.jpg") center/cover no-repeat; }
+  #start .card, #lobby .lobby-card, #over .card { background: rgba(8,13,26,.62); border: 1px solid rgba(120,200,255,.16); border-radius: 18px; backdrop-filter: blur(6px); box-shadow: 0 16px 50px rgba(0,0,0,.45); max-width: 560px; }
+  /* splash de lancement (3 s) */
+  .splash { position: fixed; inset: 0; z-index: 100; background: #070b17; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; transition: opacity .6s ease; }
+  .splash img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .splash .sfade { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(7,11,23,.15) 45%, rgba(7,11,23,.92)); }
+  .splash .sload { position: relative; margin-bottom: 52px; width: min(400px, 74vw); text-align: center; }
+  .splash .stxt { font-weight: 800; letter-spacing: 4px; font-size: 12px; opacity: .85; }
+  .splash .sbar { height: 5px; background: rgba(255,255,255,.14); border-radius: 3px; overflow: hidden; margin-top: 11px; }
+  .splash .sbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #4fd3e6, #9b6bff); border-radius: 3px; animation: sload 3s ease forwards; }
+  @keyframes sload { to { width: 100%; } }
+  .splash.hide { opacity: 0; pointer-events: none; }
+  /* ---- menu paramètres (Échap) ---- */
+  .settings { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(6,10,20,.82); backdrop-filter: blur(6px); }
+  .settings[hidden] { display: none; }
+  .set-card { width: min(540px, 92vw); background: rgba(10,16,30,.92); border: 1px solid rgba(120,200,255,.2); border-radius: 16px; padding: 26px 28px; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
+  .set-card h2 { text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-size: 22px; color: #bff0f6; }
+  .set-row { display: grid; grid-template-columns: 160px 1fr 54px; align-items: center; gap: 12px; margin: 13px 0; font-weight: 700; font-size: 14px; }
+  .set-row.toggle { grid-template-columns: 160px auto; }
+  .set-row input[type=range] { width: 100%; accent-color: #4fd3e6; }
+  .set-row input[type=checkbox] { width: 20px; height: 20px; accent-color: #4fd3e6; }
+  .set-val { text-align: right; font-variant-numeric: tabular-nums; opacity: .8; color: #9fe6f0; }
+  .set-btns { display: flex; gap: 12px; margin-top: 22px; }
+  .set-hint { text-align: center; font-size: 11px; opacity: .45; margin-top: 12px; }
+  .card { text-align: center; max-width: 480px; padding: 30px 26px; }
+  .card h1 { font-size: 32px; letter-spacing: 1px; margin-bottom: 6px; } .card h1 span { color: #6fd0ff; }
+  .card p { opacity: .86; line-height: 1.5; margin-bottom: 10px; font-size: 15px; }
+  .modes { display: flex; gap: 12px; justify-content: center; margin: 16px 0; }
+  .mode { cursor: pointer; pointer-events: auto; border: 2px solid #2d6fb0; background: #12264a; border-radius: 12px; padding: 16px 26px; font-size: 20px; font-weight: 800; color: #eaf2ff; }
+  .mode:hover { background: #1b3870; } .mode b { color: #6fd0ff; }
+  .keys { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+  .key { background: #1a2b4e; border: 1px solid #335; border-bottom-width: 3px; border-radius: 7px; padding: 5px 10px; font-size: 13px; font-weight: 700; }
+  .btn { margin-top: 8px; pointer-events: auto; cursor: pointer; border: 0; border-radius: 12px; padding: 12px 28px; font-size: 17px; font-weight: 800; color: #04121f; background: linear-gradient(180deg,#8ef0a0,#49d26a); box-shadow: 0 5px 0 #2a8f49; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #2a8f49; }
+  #loading { font-size: 15px; opacity: .8; }
+  .hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 11px; opacity: .5; }
+  /* ---- scoreboard type Valorant (Tab) ---- */
+  .board { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: rgba(6,10,20,.78); backdrop-filter: blur(6px); padding: 20px; z-index: 50; }
+  .board[hidden] { display: none; }
+  .bd-head { display: flex; align-items: center; gap: 16px; font-weight: 900; font-size: 30px; margin-bottom: 12px; letter-spacing: 1px; }
+  .bd-head .bd-you { color: #4fd3e6; } .bd-head .bd-en { color: #ff6a6a; } .bd-head .bd-sep { opacity: .4; }
+  .bd-head .bd-rnd { font-size: 13px; opacity: .6; font-weight: 700; letter-spacing: .5px; margin-left: 6px; }
+  .bd-team { width: min(760px, 94vw); border-radius: 10px; overflow: hidden; }
+  .bd-team.att { box-shadow: 0 0 0 1px rgba(79,211,230,.3); }
+  .bd-team.en  { box-shadow: 0 0 0 1px rgba(255,106,106,.3); margin-top: 10px; }
+  .bd-row { display: grid; grid-template-columns: 52px 1fr 46px 46px 46px 58px; align-items: center; height: 46px; padding: 0 12px; gap: 8px; font-weight: 700; }
+  .bd-row.hdr { height: 30px; font-size: 11px; letter-spacing: 1px; opacity: .7; font-weight: 800; background: rgba(255,255,255,.05); }
+  .bd-team.att .bd-row:not(.hdr) { background: linear-gradient(90deg, rgba(60,180,200,.28), rgba(60,180,200,.12)); }
+  .bd-team.en  .bd-row:not(.hdr) { background: linear-gradient(90deg, rgba(200,70,70,.28), rgba(200,70,70,.12)); }
+  .bd-team .bd-row:not(.hdr) + .bd-row:not(.hdr) { margin-top: 2px; }
+  .bd-row.me { outline: 2px solid #ffd34d; outline-offset: -2px; }
+  .bd-pic { width: 40px; height: 40px; border-radius: 7px; background: #0c1526 center/cover no-repeat; object-fit: cover; }
+  .bd-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bd-name .tag { font-size: 10px; opacity: .6; margin-left: 6px; font-weight: 600; }
+  .bd-col { text-align: center; font-variant-numeric: tabular-nums; }
+  .bd-col.k { color: #fff; } .bd-col.d { opacity: .7; } .bd-col.a { opacity: .7; }
+  .bd-ping { text-align: right; font-size: 13px; opacity: .65; font-variant-numeric: tabular-nums; }
+  .bd-ping b { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 5px; vertical-align: middle; }
+  .bd-dead { opacity: .45; }
+  /* ---- 5v5 en ligne : bouton + lobby ---- */
+  .btn-online { margin-top: 14px; width: 100%; padding: 13px; border: 0; border-radius: 10px; cursor: pointer; font-weight: 800; font-size: 15px; letter-spacing: .5px; color: #06202a; background: linear-gradient(90deg, #4fd3e6, #3fb0c4); box-shadow: 0 4px 14px rgba(79,211,230,.3); }
+  .btn-online small { font-weight: 600; opacity: .7; }
+  .btn-online:hover { filter: brightness(1.08); }
+  .lobby-card { max-width: 620px; }
+  #lobbyStatus { font-weight: 700; margin: 4px 0 14px; color: #bff0f6; min-height: 20px; }
+  .lobby-teams { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center; margin: 10px 0 14px; }
+  .lobby-col { display: flex; flex-direction: column; gap: 6px; }
+  .lobby-vs { font-weight: 900; opacity: .5; font-size: 18px; }
+  .lslot { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: 13px; font-weight: 700; min-height: 42px; }
+  .lobby-col.en .lslot { flex-direction: row-reverse; text-align: right; }
+  .lslot .pic { width: 30px; height: 30px; border-radius: 6px; background: #0c1526 center/cover no-repeat; flex: 0 0 auto; }
+  .lslot.empty { opacity: .45; font-style: italic; font-weight: 600; }
+  .lslot.me { outline: 2px solid #ffd34d; outline-offset: -2px; }
+  .lslot .tag { font-size: 10px; opacity: .6; font-weight: 600; }
+  .lobby-count { font-size: 13px; opacity: .8; } .lobby-count b { color: #4fd3e6; font-variant-numeric: tabular-nums; }
+  .btn.ghost { background: rgba(255,255,255,.08); color: #eaf2ff; }
+  /* ---- armes : sélecteur, nom ---- */
+  .wname { font-size: 12px; font-weight: 800; letter-spacing: 1px; opacity: .7; text-align: right; margin-bottom: 2px; }
+  .wsel { position: absolute; right: 24px; bottom: 74px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+  .wk { font-size: 12px; font-weight: 700; opacity: .4; background: rgba(8,14,30,.5); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 3px 9px; letter-spacing: .5px; }
+  .wk b { display: inline-block; width: 15px; height: 15px; line-height: 15px; text-align: center; background: rgba(255,255,255,.14); border-radius: 3px; margin-right: 5px; font-size: 10px; }
+  .wk.on { opacity: 1; border-color: #4fd3e6; color: #bff0f6; box-shadow: 0 0 10px rgba(79,211,230,.3); }
+  .wk.on b { background: #4fd3e6; color: #06202a; }
+  /* ---- lunette sniper ---- */
+  .scope { position: absolute; inset: 0; z-index: 40; pointer-events: none;
+    background: radial-gradient(circle at 50% 50%, transparent 0 28%, rgba(0,0,0,.55) 29% 31%, #000 33%); }
+  .scope[hidden] { display: none; }
+  .scope-ring { position: absolute; left: 50%; top: 50%; width: 56vh; height: 56vh; transform: translate(-50%,-50%); border: 2px solid rgba(79,211,230,.45); border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.8) inset; }
+  .scope .sl { position: absolute; left: 50%; top: 50%; background: rgba(140,240,255,.8); }
+  .scope .sh { width: 60vh; height: 1px; transform: translate(-50%,-50%); }
+  .scope .sv { width: 1px; height: 60vh; transform: translate(-50%,-50%); }
+  /* ---- badge de série (kills) ---- */
+  .killbadge { position: absolute; left: 50%; top: 30%; transform: translate(-50%,-50%); z-index: 45; pointer-events: none; }
+  .killbadge[hidden] { display: none; }
+  .killbadge img { width: 150px; height: 150px; filter: drop-shadow(0 0 16px rgba(60,240,170,.6)); }
+  .killbadge.pop { animation: badgePop .5s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes badgePop { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 55% { transform: translate(-50%,-50%) scale(1.12); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
+  /* ===== bannières style Valorant ===== */
+  #vb { position: absolute; left: 50%; top: 27%; transform: translate(-50%,-50%); z-index: 46; pointer-events: none; text-align: center; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; }
+  #vb[hidden] { display: none; }
+  #vb.pop { animation: vbPop .45s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes vbPop { 0% { transform: translate(-50%,-50%) scale(.4); opacity: 0; } 55% { transform: translate(-50%,-50%) scale(1.1); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
+  .vb-ace { position: relative; }
+  .vb-ace .gem { width: 42px; height: 42px; margin: 0 auto 4px; transform: rotate(45deg); clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%); box-shadow: 0 0 20px var(--ag), inset 0 0 0 3px rgba(255,255,255,.6); }
+  .vb-ace .bar { height: 6px; margin: 6px auto; background: linear-gradient(90deg,transparent,var(--b1),transparent); box-shadow: 0 0 14px var(--ag); }
+  .vb-ace .t { font-size: 70px; font-weight: 700; letter-spacing: 4px; line-height: 1; color: #fff; text-shadow: 0 3px 8px rgba(0,0,0,.5); }
+  .vb-ace.teal { --ag: rgba(47,228,208,.7); --b1: #2fe4d0; } .vb-ace.teal .gem { background: linear-gradient(135deg,#d8fffb,#4fd8cc); }
+  .vb-ace.gold { --ag: rgba(243,215,154,.7); --b1: #f3d79a; } .vb-ace.gold .gem { background: linear-gradient(135deg,#fff3d8,#d9b25a); }
+  .vb-ace.sm .t { font-size: 40px; } .vb-ace.sm .gem { width: 28px; height: 28px; }
+  .vb-streak { display: inline-block; padding: 10px 52px; font-size: 34px; font-weight: 700; letter-spacing: 2px; color: #fff; text-transform: uppercase; background: linear-gradient(180deg,#27d8c6 0%,#0e928a 100%); clip-path: polygon(7% 0,100% 0,93% 100%,0 100%); box-shadow: 0 0 22px rgba(40,224,200,.45), inset 0 0 0 2px rgba(255,255,255,.22); text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .vb-clutch .bar { height: 5px; margin: 6px auto; width: 300px; background: linear-gradient(90deg,transparent,#f3d79a,transparent); box-shadow: 0 0 12px rgba(243,215,154,.6); }
+  .vb-clutch .t { font-size: 46px; font-weight: 700; letter-spacing: 4px; color: #fff; text-shadow: 0 3px 8px rgba(0,0,0,.5); }
+  /* grande bannière résultat (fin de match) */
+  .vb-res { position: relative; display: inline-block; min-width: 440px; padding: 24px 46px 18px; text-align: center; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; clip-path: polygon(0 0,100% 0,100% 72%,96% 100%,4% 100%,0 72%); box-shadow: 0 0 40px -6px var(--glow), inset 0 0 0 2px rgba(255,255,255,.22); }
+  .vb-res.win { --glow: rgba(47,228,208,.75); background: linear-gradient(135deg,#0a4a48,#12807a 48%,#1fb8ad); }
+  .vb-res.lose { --glow: rgba(255,91,110,.7); background: linear-gradient(135deg,#5c0f1d,#9c1b30 48%,#e0344b); }
+  .vb-res b { display: block; font-size: 78px; font-weight: 700; line-height: .9; letter-spacing: 3px; color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,.45); }
+  .vb-res i { display: block; margin-top: 4px; font-size: 16px; letter-spacing: 6px; opacity: .85; font-weight: 600; font-style: normal; color: #fff; }
+  .vb-res::before, .vb-res::after { content: ""; position: absolute; top: 12px; bottom: 12px; width: 26px; opacity: .5; background: repeating-linear-gradient(115deg,rgba(255,255,255,.5) 0 3px,transparent 3px 11px); }
+  .vb-res::before { left: 14px; } .vb-res::after { right: 14px; transform: scaleX(-1); }
+  .vb-mvp { position: relative; display: inline-block; margin-top: 16px; padding: 10px 50px; font-size: 32px; font-weight: 700; letter-spacing: 3px; color: #fff; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; background: linear-gradient(180deg,#141c22,#0a1015); clip-path: polygon(12% 0,88% 0,100% 100%,0 100%); box-shadow: inset 0 0 0 2px rgba(255,255,255,.12); }
+  .vb-mvp i { position: absolute; top: 0; bottom: 0; width: 34px; background: linear-gradient(180deg,#f3d79a,#c9a24e); }
+  .vb-mvp i.l { left: -6px; clip-path: polygon(0 0,100% 0,60% 100%,0 100%); } .vb-mvp i.r { right: -6px; clip-path: polygon(40% 0,100% 0,100% 100%,0 100%); }
+</style>
+</head>
+<body>
+<div class="splash" id="splash">
+  <img src="valotiz.jpg" alt="VALOTIZ">
+  <div class="sfade"></div>
+  <div class="sload"><div class="stxt">CHARGEMENT…</div><div class="sbar"><i></i></div></div>
+</div>
+<canvas id="cv"></canvas>
+<div class="hud" id="hud" hidden>
+  <div class="topbar">
+    <div class="tteam att" id="tAtt"></div>
+    <div class="tmid"><span class="tscore you" id="sYou">0</span><div class="tclockwrap"><span class="tclock" id="tClock">2:00</span><span class="rnd" id="sRnd">Manche 1</span></div><span class="tscore en" id="sEn">0</span></div>
+    <div class="tteam en" id="tEn2"></div>
+  </div>
+  <div class="timer" id="timer"></div>
+  <div class="spectate" id="spectate" hidden>SPECTATEUR · <b id="specName"></b><span class="spechint">clic = joueur suivant</span></div>
+  <div class="feed" id="feed"></div>
+  <div class="cross" id="cross"><i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i></div>
+  <div class="hitm" id="hitm"><i class="a"></i><i class="b2"></i><i class="c"></i><i class="d"></i></div>
+  <div class="vit" id="vit"></div>
+  <div class="banner" id="banner"></div>
+  <div class="bottom"><div class="stat"><div class="lab">VIE</div><div class="hpn" id="hpn">100</div></div><div class="stat"><div class="lab">ARMURE</div><div class="armor" id="armn">50</div></div></div>
+  <div class="ammo" id="ammoBox"><div class="wname" id="wName">Vandale</div><span class="m" id="mag">25</span> <span class="r" id="res">/ 75</span></div>
+  <div class="wsel"><span class="wk" id="wOp"><b>1</b> Operator</span><span class="wk" id="wPistol"><b>2</b> Pistolet</span><span class="wk on" id="wVandal"><b>3</b> Vandale</span></div>
+  <div class="dmgflash" id="dmgflash"></div>
+  <div class="dmgind" id="dmgind"><div class="dmgarc"></div></div>
+  <div class="scope" id="scope" hidden><div class="scope-ring"></div><i class="sl sh"></i><i class="sl sv"></i></div>
+  <div class="killbadge" id="killbadge" hidden><img id="killbadgeImg" alt=""></div>
+  <div id="vb" hidden></div>
+  <div class="hint">clic = tirer · <b>1-3 = armes</b> · clic droit = lunette (sniper) · R = recharger · <b>Tab = tableau</b> · ÉCHAP = souris</div>
+  <div class="board" id="board" hidden>
+    <div class="bd-head"><span class="bd-you" id="bdYou">0</span><span class="bd-sep">:</span><span class="bd-en" id="bdEn">0</span><span class="bd-rnd" id="bdRnd">Manche 1</span></div>
+    <div class="bd-team att" id="bdAtt"></div>
+    <div class="bd-team en" id="bdEn2"></div>
+  </div>
+</div>
+<div class="panel" id="start">
+  <div class="card">
+    <h1>VALO<span>TIZ</span></h1>
+    <p id="loading">Chargement des avatars…</p>
+    <div id="startBody" hidden>
+      <p>FPS tactique à la Valorant sur une map inspirée de <b>Pearl</b> (2 sites + mid). Élimine l'équipe adverse ; premier à <b>5 manches</b>.</p>
+      <div class="keys"><span class="key">WASD — bouger</span><span class="key">Espace — sauter</span><span class="key">Souris — viser</span><span class="key">Clic — tirer</span><span class="key">1/2/3 — Operator / Pistolet / Vandale</span><span class="key">Clic droit — lunette (bascule)</span><span class="key">R — recharger</span><span class="key">Maj — marcher</span><span class="key">Tab — tableau</span></div>
+      <p style="margin-top:10px;font-weight:700">Choisis ton format :</p>
+      <div class="modes"><button class="mode" data-n="2">2<b>v</b>2</button><button class="mode" data-n="5">5<b>v</b>5</button></div>
+      <button class="btn-online" id="btnOnline">5v5 EN LIGNE <small>— rechercher une partie</small></button>
+    </div>
+  </div>
+</div>
+<div class="panel" id="lobby" hidden>
+  <div class="card lobby-card">
+    <h1>PARTIE <span>5v5 EN LIGNE</span></h1>
+    <p id="lobbyStatus">Recherche de joueurs…</p>
+    <div class="lobby-teams">
+      <div class="lobby-col att" id="lobbyAtt"></div>
+      <div class="lobby-vs">VS</div>
+      <div class="lobby-col en" id="lobbyDef"></div>
+    </div>
+    <p class="lobby-count"><b id="lobbyTimer">15</b> s avant de compléter avec des bots</p>
+    <div class="modes"><button class="btn" id="lobbyStart">DÉMARRER MAINTENANT</button><button class="btn ghost" id="lobbyCancel">Annuler</button></div>
+  </div>
+</div>
+<div class="panel" id="over" hidden>
+  <div class="card" id="overCard">
+    <h1 id="overTitle"><span>—</span></h1>
+    <p id="overSub">—</p>
+    <button class="btn" id="again">REJOUER</button>
+  </div>
+</div>
+<div class="settings" id="settings" hidden>
+  <div class="set-card">
+    <h2>PARAMÈTRES</h2>
+    <div class="set-row"><label>Volume</label><input type="range" id="setVol" min="0" max="1" step="0.05"><span class="set-val" id="setVolV"></span></div>
+    <div class="set-row"><label>Sensibilité X</label><input type="range" id="setSx" min="0.2" max="3" step="0.05"><span class="set-val" id="setSxV"></span></div>
+    <div class="set-row"><label>Sensibilité Y</label><input type="range" id="setSy" min="0.2" max="3" step="0.05"><span class="set-val" id="setSyV"></span></div>
+    <div class="set-row"><label>Sensibilité lunette</label><input type="range" id="setAds" min="0.2" max="2" step="0.05"><span class="set-val" id="setAdsV"></span></div>
+    <div class="set-row"><label>Champ de vision</label><input type="range" id="setFov" min="60" max="103" step="1"><span class="set-val" id="setFovV"></span></div>
+    <div class="set-row toggle"><label>Inverser l'axe Y</label><input type="checkbox" id="setInv"></div>
+    <div class="set-btns"><button class="btn" id="setResume">REPRENDRE</button><button class="btn ghost" id="setMenu">Quitter au menu</button></div>
+    <div class="set-hint">Échap pour ouvrir / fermer</div>
+  </div>
+</div>
+
+<script type="importmap">{ "imports": { "three": "./three.module.min.js" } }</script>
+<script type="module">
+"use strict";
+import * as THREE from "three";
+import { GLTFLoader } from "./GLTFLoader.js";
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const rand = (a, b) => a + Math.random() * (b - a);
+const now = () => performance.now() / 1000;
+const TAU = Math.PI * 2;
+
+// ===================== SONS (pack Valorant mp3 + pas synthétisé) =====================
+const Snd = (() => {
+  let ctx = null, loaded = false, master = null, vol = 1; const buffers = {};
+  const mg = () => { if (!master) { master = ac().createGain(); master.gain.value = vol; master.connect(ac().destination); } return master; };
+  const FILES = { shoot: "shoot.mp3", reload: "reload.mp3", headshot: "headshot.mp3", kill: "kill.mp3", roundwin: "roundwin.mp3", roundlose: "roundlose.mp3", victory: "victory.mp3", oneleft: "oneleft.mp3",
+    sniper: "sniper.mp3", sniperreload: "sniperreload.mp3",
+    kill1: "kill1.mp3", kill2: "kill2.mp3", kill3: "kill3.mp3", kill4: "kill4.mp3", killace: "killace.mp3",
+    vtriple: "vtriple.mp3", vquadra: "vquadra.mp3", vace: "vace.mp3" };
+  const ac = () => ctx || (ctx = new (window.AudioContext || window.webkitAudioContext)());
+  async function load() { if (loaded) return; loaded = true; const c = ac(); await Promise.all(Object.entries(FILES).map(async ([k, f]) => { try { const ab = await (await fetch("sounds/" + f)).arrayBuffer(); buffers[k] = await c.decodeAudioData(ab); } catch (e) {} })); }
+  function play(k, vol, rate) { const c = ac(), b = buffers[k]; if (!b) return; const s = c.createBufferSource(); s.buffer = b; const g = c.createGain(); g.gain.value = vol == null ? 1 : vol; if (rate) s.playbackRate.value = rate; s.connect(g).connect(mg()); s.start(); }
+  function tick(freq, dur, vol) { const c = ac(), o = c.createOscillator(), g = c.createGain(); o.type = "square"; o.frequency.value = freq; g.gain.setValueAtTime(vol, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur); o.connect(g).connect(mg()); o.start(); o.stop(c.currentTime + dur + 0.02); }
+  function step() { const c = ac(), n = (c.sampleRate * 0.05) | 0, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; const s = c.createBufferSource(); s.buffer = buf; const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 330; const g = c.createGain(); g.gain.setValueAtTime(0.08, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.06); s.connect(f).connect(g).connect(mg()); s.start(); }
+  return {
+    resume() { try { ac().resume(); } catch {} load(); },
+    shot: (v) => play("shoot", v == null ? 0.5 : v, 1 + (Math.random() * 0.06 - 0.03)),
+    hit: () => tick(900, 0.05, 0.22),          // hitmarker corps (court, synthé)
+    head: () => play("headshot", 0.7),          // hitmarker tête (son du pack)
+    sniperShot: () => play("sniper", 0.6),
+    pistolShot: () => play("shoot", 0.5, 1.32),   // même tir, plus aigu/claquant
+    knife() { const c = ac(), o = c.createOscillator(), g = c.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(760, c.currentTime); o.frequency.exponentialRampToValueAtTime(170, c.currentTime + 0.12); g.gain.setValueAtTime(0.2, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.14); o.connect(g).connect(mg()); o.start(); o.stop(c.currentTime + 0.16); },  // « whoosh » synthé
+    step, reload: () => play("reload", 0.6), sniperReload: () => play("sniperreload", 0.6),
+    death: () => play("kill", 0.55),
+    roundWin: () => play("roundwin", 0.85), roundLose: () => play("roundlose", 0.85),
+    victory: () => play("victory", 0.9), oneLeft: () => play("oneleft", 0.85),
+    // ding de série selon le nombre de kills de la manche (+ voix annonceur à partir du triple)
+    streak(n) {
+      const ding = n >= 5 ? "killace" : n === 4 ? "kill4" : n === 3 ? "kill3" : n === 2 ? "kill2" : "kill1";
+      play(ding, 0.8);
+      const voice = n >= 5 ? "vace" : n === 4 ? "vquadra" : n === 3 ? "vtriple" : null;
+      if (voice) setTimeout(() => play(voice, 0.95), 260);
+    },
+    start: () => {},
+    setVol: (v) => { vol = v; if (master) master.gain.value = v; },
+  };
+})();
+
+// ===================== THREE =====================
+const renderer = new THREE.WebGLRenderer({ canvas: $("cv"), antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+if (renderer.outputColorSpace !== undefined) renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x4a8794); scene.fog = new THREE.Fog(0x5f97a2, 80, 200);   // Pearl : aqua froid, soirée nuageuse
+const camera = new THREE.PerspectiveCamera(78, innerWidth / innerHeight, 0.05, 300);
+camera.rotation.order = "YXZ";
+const EYE = 1.7;
+const sun = new THREE.DirectionalLight(0xc3dbe2, 1.0); sun.position.set(26, 58, 14); sun.castShadow = true;   // lumière froide et diffuse (ciel couvert)
+sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006; const sc = sun.shadow.camera; sc.left = -52; sc.right = 52; sc.top = 64; sc.bottom = -64; sc.near = 1; sc.far = 180; scene.add(sun);
+const hemiLight = new THREE.HemisphereLight(0xa6cdd6, 0x6b7a84, 1.05); scene.add(hemiLight);
+const ambLight = new THREE.AmbientLight(0x6d8894, 0.45); scene.add(ambLight);
+
+// ===================== MAP (deux thèmes rebuild­ables : PEARL + HAVEN) =====================
+const WALLS = []; // {x0,x1,z0,z1,h}
+const MAPX = 44, MAPZ = 64;                                              // grande map
+let mapObjs = [];                                                        // tout ce qui est ajouté par la map (retiré au changement)
+const track = (m) => { scene.add(m); mapObjs.push(m); return m; };
+// matériaux (couleur fixée par thème)
+const matFloor = new THREE.MeshStandardMaterial({ color: 0x98a4a8 });
+const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(MAPX * 2, MAPZ * 2), matFloor); floorMesh.rotation.x = -Math.PI / 2; floorMesh.receiveShadow = true; scene.add(floorMesh);
+const wallMat = new THREE.MeshStandardMaterial({ color: 0xc2ccce });
+const terraMat = new THREE.MeshStandardMaterial({ color: 0x7e8c94 });    // toits / bandeaux
+const crateMat = new THREE.MeshStandardMaterial({ color: 0x8793a0 });
+const woodMat = new THREE.MeshStandardMaterial({ color: 0x6f7a84 });
+const accentMat = new THREE.MeshBasicMaterial({ color: 0xffa83c });      // LED orange (Pearl)
+const lanternMat = new THREE.MeshBasicMaterial({ color: 0xffd98a });
+const awningMat = new THREE.MeshStandardMaterial({ color: 0x2f9fb0, side: THREE.DoubleSide });
+const leafMat = new THREE.MeshStandardMaterial({ color: 0x4a9a52 });
+const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x8a79c9 });    // violet (jacaranda / rhododendron)
+const potMat = new THREE.MeshStandardMaterial({ color: 0x8a9298 });
+const spikeMat = new THREE.MeshBasicMaterial({ color: 0x3fe0c8 });       // caisse « spike » teal lumineuse (Haven)
+const goldMat = new THREE.MeshStandardMaterial({ color: 0xe8c24a, metalness: 0.4, roughness: 0.4 });
+const siteMatA = new THREE.MeshBasicMaterial({ color: 0x3fd0a0, transparent: true, opacity: .25, side: THREE.DoubleSide });
+const siteMatB = new THREE.MeshBasicMaterial({ color: 0x4aa0ff, transparent: true, opacity: .25, side: THREE.DoubleSide });
+// ---- textures stylisées (look cartoon Valorant : panneaux peints + liseré + grain doux) ----
+const _h2 = (n) => ("0" + clamp(n | 0, 0, 255).toString(16)).slice(-2);
+const shade = (hex, a) => "#" + _h2(((hex >> 16) & 255) + a) + _h2(((hex >> 8) & 255) + a) + _h2((hex & 255) + a);
+const texCache = {};
+function makeWallTex(base, trim) {
+  const c = document.createElement("canvas"); c.width = c.height = 256; const g = c.getContext("2d");
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, shade(base, 20)); gr.addColorStop(0.55, shade(base, 2)); gr.addColorStop(1, shade(base, -22));
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  // grain peint doux
+  for (let i = 0; i < 1400; i++) { g.fillStyle = "rgba(" + (Math.random() < .5 ? "255,255,255," : "0,0,0,") + (Math.random() * 0.03).toFixed(3) + ")"; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+  // joints de panneaux
+  g.strokeStyle = shade(base, -34); g.lineWidth = 2;
+  for (let x = 0; x <= 256; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
+  g.beginPath(); g.moveTo(0, 190); g.lineTo(256, 190); g.stroke();
+  g.strokeStyle = shade(base, 26); g.lineWidth = 1; g.beginPath(); g.moveTo(0, 192); g.lineTo(256, 192); g.stroke();
+  // liseré d'accent (haut) — le détail « Valorant »
+  g.fillStyle = trim; g.fillRect(0, 22, 256, 7); g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(0, 22, 256, 2);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+}
+function makeCrateTex(base, glow) {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d");
+  g.fillStyle = shade(base, 6); g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = shade(base, -40); g.lineWidth = 8; g.strokeRect(4, 4, 120, 120);          // cadre
+  g.strokeStyle = shade(base, 22); g.lineWidth = 2; g.strokeRect(10, 10, 108, 108);
+  g.fillStyle = shade(base, -30); for (const [x, y] of [[14, 14], [108, 14], [14, 108], [108, 108]]) g.fillRect(x, y, 6, 6); // boulons
+  g.fillStyle = glow; g.fillRect(30, 56, 68, 16); g.fillStyle = "rgba(255,255,255,.35)"; g.fillRect(30, 56, 68, 4); // bande lumineuse
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+// helpers (tous via track → retirés proprement au changement de map)
+function strip(cx, cy, cz, w, h, d) { track(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), accentMat)).position.set(cx, cy, cz); }
+function bush(cx, cz) { track(new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.7, 0.9, 8), potMat)).position.set(cx, 0.45, cz); const l = track(new THREE.Mesh(new THREE.SphereGeometry(1.1, 8, 7), Math.random() < 0.4 ? leafMat2 : leafMat)); l.position.set(cx, 1.4, cz); l.castShadow = true; }
+function lantern(cx, cy, cz) {
+  let best = null, bd = 6;
+  for (const w of WALLS) { if (w.h < cy) continue; const qx = clamp(cx, w.x0, w.x1), qz = clamp(cz, w.z0, w.z1), dd = Math.hypot(cx - qx, cz - qz); if (dd < bd) { bd = dd; best = { qx, qz }; } }
+  if (best) { const dx = cx - best.qx, dz = cz - best.qz, l = Math.hypot(dx, dz) || 1; cx = best.qx + dx / l * 0.35; cz = best.qz + dz / l * 0.35; }
+  track(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.55, 0.3), lanternMat)).position.set(cx, cy, cz);
+  track(new THREE.Mesh(new THREE.SphereGeometry(0.95, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffcf7a, transparent: true, opacity: 0.34 }))).position.set(cx, cy, cz);
+  // pas de PointLight par lanterne (perf) : la lueur émissive suffit, la scène est éclairée par le soleil + ciel
+}
+function barrel(cx, cz) { track(new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.68, 1.3, 14), woodMat)).position.set(cx, 0.65, cz); const rm = new THREE.MeshStandardMaterial({ color: 0x3a2a1a }); const r1 = track(new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.05, 6, 16), rm)); r1.rotation.x = Math.PI / 2; r1.position.set(cx, 0.95, cz); const r2 = track(new THREE.Mesh(new THREE.TorusGeometry(0.64, 0.05, 6, 16), rm)); r2.rotation.x = Math.PI / 2; r2.position.set(cx, 0.35, cz); WALLS.push({ x0: cx - 0.6, x1: cx + 0.6, z0: cz - 0.6, z1: cz + 0.6, h: 1.3 }); }
+function arch(cx, cz, along) { const t = track(new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.32, 8, 20, Math.PI), terraMat)); t.position.set(cx, 3.2, cz); t.rotation.z = Math.PI; if (along === "z") t.rotation.y = Math.PI / 2; }
+function awning(cx, cy, cz, w, dir) { const m = track(new THREE.Mesh(new THREE.PlaneGeometry(w, 1.8), awningMat)); m.position.set(cx, cy, cz + dir * 0.9); m.rotation.x = -Math.PI / 2 + dir * 0.6; }
+function roof(cx, cz, w, d) { track(new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), terraMat)).position.set(cx, 5.1, cz); }
+// guirlande de drapeaux de prière (Haven)
+function flags(x1, z1, x2, z2, y) {
+  const cols = [0xf2f2f2, 0xd84a3a, 0xf0c23a, 0x3aa84a, 0x3a7ad8]; const n = 11, ang = Math.atan2(x2 - x1, z2 - z1);
+  for (let i = 0; i < n; i++) { const t = i / (n - 1), x = x1 + (x2 - x1) * t, z = z1 + (z2 - z1) * t, sag = Math.sin(t * Math.PI) * 0.7; const m = track(new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.62), new THREE.MeshBasicMaterial({ color: cols[i % cols.length], side: THREE.DoubleSide }))); m.position.set(x, y - sag, z); m.rotation.y = ang; }
+}
+// stupa doré (Haven)
+function stupa(cx, cz, baseY) {
+  track(new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 2.4), wallMat)).position.set(cx, baseY + 0.6, cz);
+  track(new THREE.Mesh(new THREE.SphereGeometry(1.05, 14, 12), goldMat)).position.set(cx, baseY + 1.75, cz);
+  track(new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.5, 8), goldMat)).position.set(cx, baseY + 2.95, cz);
+}
+function addBox(cx, cz, w, d, h, mat, cast) { const m = track(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || wallMat)); m.position.set(cx, h / 2, cz); m.castShadow = cast !== false; m.receiveShadow = true; WALLS.push({ x0: cx - w / 2, x1: cx + w / 2, z0: cz - d / 2, z1: cz + d / 2, h }); return m; }
+function siteMark(cx, cz, mat) { const r = track(new THREE.Mesh(new THREE.RingGeometry(3.4, 3.8, 40), mat)); r.rotation.x = -Math.PI / 2; r.position.set(cx, 0.05, cz); }
+function wallX(z, x0, x1, h, gaps) { let segs = [[x0, x1]]; for (const [gc, gw] of (gaps || [])) { const ns = []; for (const [a, b] of segs) { const lo = gc - gw / 2, hi = gc + gw / 2; if (hi <= a || lo >= b) ns.push([a, b]); else { if (a < lo) ns.push([a, lo]); if (hi < b) ns.push([hi, b]); } } segs = ns; } for (const [a, b] of segs) if (b - a > 0.2) addBox((a + b) / 2, z, b - a, 1.6, h); }
+function wallZ(x, z0, z1, h, gaps) { let segs = [[z0, z1]]; for (const [gc, gw] of (gaps || [])) { const ns = []; for (const [a, b] of segs) { const lo = gc - gw / 2, hi = gc + gw / 2; if (hi <= a || lo >= b) ns.push([a, b]); else { if (a < lo) ns.push([a, lo]); if (hi < b) ns.push([hi, b]); } } segs = ns; } for (const [a, b] of segs) if (b - a > 0.2) addBox(x, (a + b) / 2, 1.6, b - a, h); }
+// --- structure commune (identique aux deux maps) ---
+function buildBlockout() {
+  const H = 5;
+  wallX(-MAPZ, -MAPX, MAPX, H); wallX(MAPZ, -MAPX, MAPX, H); wallZ(-MAPX, -MAPZ, MAPZ, H); wallZ(MAPX, -MAPZ, MAPZ, H);
+  addBox(0, 0, 20, 30, H);                 // bâtiment central (coupe la ligne de vue spawn↔spawn)
+  wallX(18, 16, 34, H); wallX(-18, 22, MAPX, H); addBox(34, 0, 2, 22, H); siteMark(26, -4, siteMatA);   // lane EST (site A)
+  addBox(28, 6, 3, 3, 1.3, crateMat); addBox(20, -2, 2.6, 2.6, 1.1, crateMat); addBox(30, -10, 3, 2.2, 1.3, crateMat); addBox(24, -24, 3.2, 2.4, 1.3, crateMat);
+  wallX(18, -34, -16, H); wallX(-18, -MAPX, -22, H); addBox(-34, 0, 2, 22, H); siteMark(-26, -4, siteMatB);   // lane OUEST (site B)
+  addBox(-28, 6, 3, 3, 1.3, crateMat); addBox(-20, -2, 2.6, 2.6, 1.1, crateMat); addBox(-30, -10, 3, 2.2, 1.3, crateMat); addBox(-24, -24, 3.2, 2.4, 1.3, crateMat);
+  addBox(0, 22, 7, 2, 1.3, crateMat); addBox(0, -22, 7, 2, 1.3, crateMat); addBox(14, -6, 3, 3, 1.3, crateMat); addBox(-14, -6, 3, 3, 1.3, crateMat);
+  addBox(16, 54, 3, 3, 1.3, crateMat); addBox(-16, 54, 3, 3, 1.3, crateMat); addBox(16, -54, 3, 3, 1.3, crateMat); addBox(-16, -54, 3, 3, 1.3, crateMat);
+  addBox(30, 14, 3, 3, 1.3, crateMat); addBox(-30, 14, 3, 3, 1.3, crateMat); addBox(30, -14, 3, 3, 1.3, crateMat); addBox(-30, -14, 3, 3, 1.3, crateMat);
+  addBox(0, 30, 4, 2.4, 1.3, crateMat); addBox(0, -30, 4, 2.4, 1.3, crateMat);
+}
+// --- déco du thème PEARL (froid, aquatique) ---
+function pearlProps() {
+  strip(0, 3.7, 15.08, 18, 0.35, 0.12); strip(0, 3.7, -15.08, 18, 0.35, 0.12); strip(10.08, 3.7, 0, 0.12, 0.35, 28); strip(-10.08, 3.7, 0, 0.12, 0.35, 28);
+  strip(33, 3.5, 0, 0.12, 0.3, 20); strip(-33, 3.5, 0, 0.12, 0.3, 20);
+  roof(0, 0, 21, 31); roof(34, 0, 3, 23); roof(-34, 0, 3, 23);
+  lantern(10.3, 3.1, -8); lantern(10.3, 3.1, 8); lantern(-10.3, 3.1, -8); lantern(-10.3, 3.1, 8); lantern(0, 3.1, 15.3); lantern(0, 3.1, -15.3); lantern(32.6, 3, -1); lantern(-32.6, 3, -1); lantern(0, 3.2, 62.5); lantern(0, 3.2, -62.5);
+  awning(0, 2.6, 15.1, 10, 1); awning(0, 2.6, -15.1, 10, -1);
+  arch(13, 18, "x"); arch(-13, 18, "x"); arch(13, -18, "x"); arch(-13, -18, "x");
+  barrel(22, 10); barrel(23.2, 10); barrel(-22, 10); barrel(-23.2, 10); barrel(8, -8); barrel(-8, -8); barrel(18, -28); barrel(-18, -28);
+  bush(11, 20); bush(-11, 20); bush(11, -20); bush(-11, -20); bush(22, -2); bush(-22, -2); bush(13, 52); bush(-13, 52); bush(13, -52); bush(-13, -52); bush(9, 13); bush(-9, 13); bush(26, -20); bush(-26, -20); bush(0, 34); bush(0, -34);
+}
+// --- déco du thème HAVEN (monastère himalayen, chaud) ---
+function havenProps() {
+  roof(0, 0, 21, 31); roof(34, 0, 3, 23); roof(-34, 0, 3, 23);                 // toits rouges (terraMat)
+  stupa(0, 0, 5.3);                                                            // stupa doré au sommet du bâtiment central
+  // guirlandes de drapeaux de prière au-dessus des lanes et du mid
+  flags(10, 15.5, 34, 15.5, 4.2); flags(-10, 15.5, -34, 15.5, 4.2); flags(10, -15.5, 34, -15.5, 4.2); flags(-10, -15.5, -34, -15.5, 4.2);
+  flags(-10, 20, 10, 20, 4.4); flags(-10, -20, 10, -20, 4.4);
+  // caisses « spike » teal lumineuses sur les sites (signature Haven)
+  addBox(26, -4, 2.2, 2.2, 1.2, spikeMat); addBox(-26, -4, 2.2, 2.2, 1.2, spikeMat);
+  lantern(10.3, 3.1, -8); lantern(10.3, 3.1, 8); lantern(-10.3, 3.1, -8); lantern(-10.3, 3.1, 8); lantern(0, 3.1, 15.3); lantern(0, 3.1, -15.3); lantern(32.6, 3, -1); lantern(-32.6, 3, -1); lantern(0, 3.2, 62.5); lantern(0, 3.2, -62.5);
+  awning(0, 2.6, 15.1, 10, 1); awning(0, 2.6, -15.1, 10, -1);
+  bush(11, 20); bush(-11, 20); bush(11, -20); bush(-11, -20); bush(22, -2); bush(-22, -2); bush(13, 52); bush(-13, 52); bush(13, -52); bush(-13, -52); bush(9, 13); bush(-9, 13); bush(26, -20); bush(-26, -20); bush(0, 34); bush(0, -34);
+}
+// --- dômes de ciel ---
+function pearlDome() {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 512; const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, 512); grd.addColorStop(0, "#1f5566"); grd.addColorStop(0.32, "#357685"); grd.addColorStop(0.5, "#5fa0a6"); grd.addColorStop(0.72, "#8ec4c0"); grd.addColorStop(1, "#b9d8cf");
+  g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
+  for (let k = 0; k < 16; k++) { const cx = Math.random() * 1024, cy = 90 + Math.random() * 300, r = 60 + Math.random() * 140; const cl = g.createRadialGradient(cx, cy, 0, cx, cy, r); cl.addColorStop(0, "rgba(220,240,238,0.14)"); cl.addColorStop(1, "rgba(220,240,238,0)"); g.fillStyle = cl; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
+  g.strokeStyle = "rgba(230,250,248,0.12)"; g.lineWidth = 3;
+  for (let k = 0; k < 7; k++) { g.beginPath(); const y = 24 + k * 48; for (let x = 0; x <= 1024; x += 14) g.lineTo(x, y + Math.sin((x / 1024) * Math.PI * 6 + k * 0.8) * 14); g.stroke(); }
+  track(new THREE.Mesh(new THREE.SphereGeometry(170, 32, 20), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), side: THREE.BackSide, fog: false })));
+}
+function havenDome() {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 512; const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, 512); grd.addColorStop(0, "#4e76a0"); grd.addColorStop(0.4, "#8aa6bc"); grd.addColorStop(0.62, "#c3ccc6"); grd.addColorStop(1, "#e6d6b2");   // ciel de montagne, horizon chaud
+  g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
+  for (let k = 0; k < 14; k++) { const cx = Math.random() * 1024, cy = 60 + Math.random() * 230, r = 70 + Math.random() * 150; const cl = g.createRadialGradient(cx, cy, 0, cx, cy, r); cl.addColorStop(0, "rgba(255,252,244,0.2)"); cl.addColorStop(1, "rgba(255,252,244,0)"); g.fillStyle = cl; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
+  // silhouette de montagnes himalayennes près de l'horizon (v≈0.5 → y≈256)
+  g.fillStyle = "rgba(70,86,104,0.55)"; g.beginPath(); g.moveTo(0, 300);
+  for (let x = 0; x <= 1024; x += 64) g.lineTo(x, 250 + Math.sin(x * 0.03) * 26 + (Math.random() * 24 - 12));
+  g.lineTo(1024, 320); g.lineTo(0, 320); g.closePath(); g.fill();
+  track(new THREE.Mesh(new THREE.SphereGeometry(170, 32, 20), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), side: THREE.BackSide, fog: false })));
+}
+function paintFloor(fill, line) {
+  const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"); g.fillStyle = fill; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = line; g.lineWidth = 2; g.strokeRect(0, 0, 64, 64); g.strokeRect(64, 64, 64, 64);
+  g.fillStyle = "rgba(255,255,255,.05)"; g.fillRect(0, 0, 64, 64); g.fillRect(64, 64, 64, 64);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(MAPX, MAPZ); matFloor.map = t; matFloor.needsUpdate = true;
+}
+// --- thèmes ---
+const THEMES = {
+  pearl: { name: "Pearl", bg: 0x4a8794, fog: [0x5f97a2, 80, 200], sun: [0xc3dbe2, 1.0, [26, 58, 14]], hemi: [0xa6cdd6, 0x6b7a84, 1.05], amb: [0x6d8894, 0.45],
+    floor: ["#98a4a8", "rgba(40,55,65,.26)"], wall: 0xc2ccce, trim: "#ffa83c", crateGlow: "#ffb24a", terra: 0x7e8c94, crate: 0x8793a0, wood: 0x6f7a84, pot: 0x8a9298, dome: pearlDome, props: pearlProps },
+  haven: { name: "Haven", bg: 0x9db4c4, fog: [0xc2c6ba, 95, 230], sun: [0xffe6c0, 1.5, [-34, 52, 30]], hemi: [0xd4e2ea, 0x8a7048, 0.9], amb: [0x8c8468, 0.42],
+    floor: ["#cdbf9e", "rgba(95,72,44,.24)"], wall: 0xe8dfc8, trim: "#b24a2e", crateGlow: "#3fe0c8", terra: 0x9c3f32, crate: 0xa67c42, wood: 0x7c5838, pot: 0xb09060, dome: havenDome, props: havenProps },
+};
+let currentMap = "pearl", currentMapName = "Pearl";
+function buildMap(key) {
+  for (const o of mapObjs) scene.remove(o); mapObjs.length = 0; WALLS.length = 0;
+  const th = THEMES[key] || THEMES.pearl; currentMap = THEMES[key] ? key : "pearl"; currentMapName = th.name;
+  scene.background.set(th.bg); scene.fog.color.set(th.fog[0]); scene.fog.near = th.fog[1]; scene.fog.far = th.fog[2];
+  sun.color.set(th.sun[0]); sun.intensity = th.sun[1]; sun.position.set(...th.sun[2]);
+  hemiLight.color.set(th.hemi[0]); hemiLight.groundColor.set(th.hemi[1]); hemiLight.intensity = th.hemi[2];
+  ambLight.color.set(th.amb[0]); ambLight.intensity = th.amb[1];
+  if (!texCache[currentMap]) texCache[currentMap] = { wall: makeWallTex(th.wall, th.trim), crate: makeCrateTex(th.crate, th.crateGlow) };
+  wallMat.map = texCache[currentMap].wall; wallMat.color.set(0xffffff); wallMat.needsUpdate = true;
+  crateMat.map = texCache[currentMap].crate; crateMat.color.set(0xffffff); crateMat.needsUpdate = true;
+  terraMat.color.set(th.terra); woodMat.color.set(th.wood); potMat.color.set(th.pot);
+  paintFloor(th.floor[0], th.floor[1]);
+  th.dome(); buildBlockout(); th.props();
+}
+buildMap("pearl");
+const SPAWN = { att: { x: 0, z: 56, yaw: 0 }, def: { x: 0, z: -56, yaw: Math.PI } };
+// couloirs d'avance (évitent le bâtiment central en x=0) : les bots poussent vers le camp adverse par ces x
+const LANES = [-30, -17, 17, 30];
+
+// ===================== collisions & raycasts =====================
+function groundY(x, z) { let g = 0; for (const w of WALLS) { if (w.h <= 1.7 && x >= w.x0 && x <= w.x1 && z >= w.z0 && z <= w.z1 && w.h > g) g = w.h; } return g; } // hauteur du sol (dessus des caisses) sous un point
+function resolve(p, r, feetY) {
+  for (const w of WALLS) {
+    if (feetY !== undefined && feetY >= w.h - 0.05) continue; // au-dessus de la boîte : pas de collision (on marche dessus)
+    const cx = clamp(p.x, w.x0, w.x1), cz = clamp(p.z, w.z0, w.z1);
+    let dx = p.x - cx, dz = p.z - cz; const dist = Math.hypot(dx, dz);
+    if (dist < r) {
+      if (dist > 0.0001) { p.x = cx + dx / dist * r; p.z = cz + dz / dist * r; }
+      else { // centre dans la boîte : pousser vers le bord le plus proche
+        const pen = [p.x - w.x0, w.x1 - p.x, p.z - w.z0, w.z1 - p.z]; const m = Math.min(...pen);
+        if (m === pen[0]) p.x = w.x0 - r; else if (m === pen[1]) p.x = w.x1 + r; else if (m === pen[2]) p.z = w.z0 - r; else p.z = w.z1 + r;
+      }
+    }
+  }
+}
+function rayWall(ox, oy, oz, dx, dy, dz, maxT) { // plus petit t>0 touchant un mur (boîte AABB y[0,h])
+  let best = maxT;
+  for (const w of WALLS) {
+    let tmin = 0, tmax = best;
+    const slab = (o, d, lo, hi) => { if (Math.abs(d) < 1e-8) { if (o < lo || o > hi) return false; return true; } let t1 = (lo - o) / d, t2 = (hi - o) / d; if (t1 > t2) { const t = t1; t1 = t2; t2 = t; } if (t1 > tmin) tmin = t1; if (t2 < tmax) tmax = t2; return tmin <= tmax; };
+    if (!slab(ox, dx, w.x0, w.x1)) continue; if (!slab(oy, dy, 0, w.h)) continue; if (!slab(oz, dz, w.z0, w.z1)) continue;
+    if (tmin > 0 && tmin < best) best = tmin;
+  }
+  return best;
+}
+function rayEnemyT(ox, oy, oz, dx, dy, dz, e, r) { // t d'impact sur un cylindre vertical (x,z,r, y in [0,1.9])
+  const fx = ox - e.x, fz = oz - e.z;
+  const a = dx * dx + dz * dz; if (a < 1e-8) return Infinity;
+  const b = 2 * (fx * dx + fz * dz), c = fx * fx + fz * fz - r * r, disc = b * b - 4 * a * c;
+  if (disc < 0) return Infinity; const t = (-b - Math.sqrt(disc)) / (2 * a); if (t <= 0) return Infinity;
+  const y = oy + dy * t; if (y < 0 || y > 1.95) return Infinity; return t;
+}
+function hasLOS(ax, az, bx, bz) { const dx = bx - ax, dz = bz - az, dist = Math.hypot(dx, dz); const t = rayWall(ax, 1.3, az, dx / dist, 0, dz / dist, dist); return t >= dist - 0.4; }
+
+// ===================== avatars (billboards animés face caméra) =====================
+const texLoader = new THREE.TextureLoader(); let ROSTER = []; const PORTRAITS = {};
+const planeGeo = new THREE.PlaneGeometry(1, 1);
+function makeSprite(entry, tint) {
+  const tex = entry.tex.clone(); tex.needsUpdate = true; tex.repeat.x = 1 / entry.n;
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: .5, side: THREE.DoubleSide, toneMapped: false });
+  const mesh = new THREE.Mesh(planeGeo, mat);
+  const HGT = 2.0, w = HGT * entry.cw / entry.ch; mesh.userData.w = w;
+  mesh.scale.set(w, HGT, 1); mesh.position.y = HGT * (entry.anchorY / entry.ch - 0.5) + 0.0;
+  // marqueur d'équipe (anneau au sol)
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.66, 20), new THREE.MeshBasicMaterial({ color: tint, transparent: true, opacity: .85, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04;
+  return { mesh, tex, ring, entry, hgt: HGT };
+}
+
+// ===================== viewmodel (armes) =====================
+// deux armes détaillées, posées dans la main droite ; on affiche celle qui est équipée.
+const RIG = new THREE.Group(); camera.add(RIG); scene.add(camera);
+const box = (w, h, d, col, x, y, z, parent) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: col })); m.position.set(x, y, z); parent.add(m); return m; };
+const cyl = (r, len, col, x, y, z, parent) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 14), new THREE.MeshBasicMaterial({ color: col })); m.rotation.x = Math.PI / 2; m.position.set(x, y, z); parent.add(m); return m; };
+function mkFlash(g, z) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.42), new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0, depthTest: false })); f.position.set(0.26, -0.2, z); g.add(f); const f2 = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthTest: false })); f2.position.set(0.26, -0.2, z + 0.01); g.add(f2); return [f, f2]; }
+// --- Vandale (rifle) : placeholder (le modèle 3D du bundle Kuronami le remplace au chargement) ---
+const gunR = new THREE.Group();
+const vandalPH = box(0.1, 0.16, 0.86, 0x2c3139, 0.26, -0.24, -0.7, gunR);
+const flashR = mkFlash(gunR, -1.3); RIG.add(gunR);
+// --- Operator (sniper) ---
+const gunS = new THREE.Group();
+box(0.1, 0.16, 0.98, 0x23262d, 0.26, -0.24, -0.74, gunS);        // corps long
+box(0.055, 0.055, 0.78, 0x0e1014, 0.26, -0.225, -1.3, gunS);     // long canon
+cyl(0.028, 0.18, 0x15181d, 0.26, -0.21, -1.68, gunS);            // frein de bouche
+box(0.09, 0.26, 0.14, 0x1a1d23, 0.255, -0.43, -0.6, gunS);       // chargeur
+box(0.078, 0.18, 0.1, 0x16191f, 0.26, -0.4, -0.44, gunS);        // poignée
+box(0.085, 0.12, 0.34, 0x202329, 0.26, -0.235, -0.3, gunS);      // crosse
+cyl(0.062, 0.44, 0x0c0e12, 0.26, -0.11, -0.78, gunS);            // tube de lunette
+cyl(0.07, 0.05, 0x17191e, 0.26, -0.11, -0.57, gunS);             // oculaire (anneau arrière)
+const lens = new THREE.Mesh(new THREE.CircleGeometry(0.044, 16), new THREE.MeshBasicMaterial({ color: 0x1c6f7e })); lens.position.set(0.26, -0.11, -0.545); gunS.add(lens); // lentille teintée (sombre)
+const flashS = mkFlash(gunS, -1.78); RIG.add(gunS); gunS.visible = false;
+const gunSParts = gunS.children.filter((c) => c !== flashS[0] && c !== flashS[1]);   // boîtes à masquer quand le modèle arrive
+// --- Pistolet (Revolver) : placeholder remplacé par le modèle du bundle ---
+const gunP = new THREE.Group();
+const pistolPH = box(0.08, 0.13, 0.26, 0x2c3139, 0.26, -0.28, -0.5, gunP);   // corps
+box(0.06, 0.12, 0.1, 0x20242b, 0.26, -0.4, -0.42, gunP);                     // poignée
+const flashP = mkFlash(gunP, -0.72); RIG.add(gunP); gunP.visible = false;
+const gunPParts = gunP.children.filter((c) => c !== flashP[0] && c !== flashP[1]);
+// --- modèles 3D texturés (bundle Kuronami) : AK → Vandale, LeverSniper → Operator, Revolver → Pistolet ---
+// le canon des modèles est sur l'axe X → rotation de +90° autour de Y pour qu'il pointe DANS l'écran (loin du joueur)
+const RIFLE_POSE = { pos: [0.3, -0.28, -0.5], rotX: 0, rotY: Math.PI / 2, rotZ: 0, span: 1.35 };
+const OP_POSE = { pos: [0.3, -0.26, -0.52], rotX: 0, rotY: Math.PI / 2, rotZ: 0, span: 1.8 };
+const PISTOL_POSE = { pos: [0.3, -0.32, -0.6], rotX: 0, rotY: Math.PI / 2, rotZ: 0, span: 0.52 };
+function keepOnly(root, re) {   // ne garde que les meshes dont le nom/matériau/parent matche
+  const rm = [];
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    let key = o.name || ""; let p = o.parent; while (p) { key += "|" + (p.name || ""); p = p.parent; }
+    const mats = Array.isArray(o.material) ? o.material : [o.material]; key += "|" + mats.map((m) => (m && m.name) || "").join("|");
+    if (!re.test(key)) rm.push(o);
+  });
+  rm.forEach((o) => o.parent && o.parent.remove(o)); return root;
+}
+function fitWeapon(slot, model, pose, onDone) {
+  model.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(model); if (bb.isEmpty()) return;
+  const size = new THREE.Vector3(), ctr = new THREE.Vector3(); bb.getSize(size); bb.getCenter(ctr); model.position.sub(ctr);
+  const holder = new THREE.Group(); holder.add(model);
+  holder.scale.setScalar(pose.span / Math.max(size.x, size.y, size.z));
+  holder.position.set(...pose.pos); holder.rotation.set(pose.rotX, pose.rotY, pose.rotZ);
+  model.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  slot.add(holder); onDone && onDone();
+}
+// un seul chargement, on clone la scène par arme (keepOnly retire les meshes non voulus du clone)
+new GLTFLoader().load("models/kuronami.glb", (g) => {
+  const pick = (re) => keepOnly(g.scene.clone(true), re);
+  fitWeapon(gunR, pick(/AK_Ninja/i), RIFLE_POSE, () => gunR.remove(vandalPH));
+  fitWeapon(gunS, pick(/LeverSniper/i), OP_POSE, () => gunSParts.forEach((p) => (p.visible = false)));
+  fitWeapon(gunP, pick(/Revolver/i), PISTOL_POSE, () => gunPParts.forEach((p) => (p.visible = false)));
+}, undefined, () => {});
+let gunKick = 0;
+
+// ===================== état =====================
+// deux armes : la Vandale (auto) et l'Operator (sniper, un coup = un kill, viseur au clic droit)
+const WEAPONS = {
+  vandal: { name: "Vandale", auto: true, magMax: 25, reserveMax: 75, fireCD: 0.1, dmgBody: 38, dmgHead: 150, spread: 0.012, hip: 0.012, range: 160, reloadT: 2.0, gun: gunR, flash: flashR, kick: 0.12, ads: false, snd: () => Snd.shot(0.42), rel: () => Snd.reload() },
+  op:     { name: "Operator", auto: false, magMax: 5, reserveMax: 15, fireCD: 1.15, dmgBody: 150, dmgHead: 255, spread: 0.0006, hip: 0.075, range: 300, reloadT: 3.6, gun: gunS, flash: flashS, kick: 0.3, ads: true, snd: () => Snd.sniperShot(), rel: () => Snd.sniperReload() },
+  pistol: { name: "Pistolet", auto: false, magMax: 6, reserveMax: 24, fireCD: 0.24, dmgBody: 55, dmgHead: 159, spread: 0.01, hip: 0.02, range: 140, reloadT: 1.6, gun: gunP, flash: flashP, kick: 0.2, ads: false, snd: () => Snd.pistolShot(), rel: () => Snd.reload() },
+};
+let curW = "vandal"; const W = () => WEAPONS[curW];
+const arms = { vandal: { mag: 25, reserve: 75 }, op: { mag: 5, reserve: 15 }, pistol: { mag: 6, reserve: 24 } }; // munitions par arme
+let ads = false; // viseur (sniper) actif
+// ---- paramètres de jeu (persistés) ----
+const SETTINGS = { vol: 0.9, sensX: 1, sensY: 1, ads: 1, fov: 78, invertY: false };
+try { const s = JSON.parse(localStorage.getItem("valotiz_settings") || "null"); if (s) Object.assign(SETTINGS, s); } catch {}
+let BASEFOV = SETTINGS.fov;
+function saveSettings() { try { localStorage.setItem("valotiz_settings", JSON.stringify(SETTINGS)); } catch {} }
+function applySettings() { BASEFOV = SETTINGS.fov; if (!ads) { camera.fov = BASEFOV; camera.updateProjectionMatrix(); } Snd.setVol(SETTINGS.vol); }
+let entities = [], player = null, teamSize = 1, score = { you: 0, en: 0 }, roundNum = 0, roundState = "idle", roundT = 0, matchOver = false, roundKills = 0, roundClock = 120;
+// ---- stats de match (scoreboard type Valorant) : cumulées sur toute la partie, clé = team:nom ----
+let STATS = {}; const YOU_KEY = "att:Toi";
+const statKey = (ent) => ent === player ? YOU_KEY : (ent.team + ":" + ent.name);
+function stat(key, team, name, entry) { return STATS[key] || (STATS[key] = { team, name, entry, k: 0, d: 0, a: 0, ping: 12 + Math.floor(Math.random() * 46) }); }
+function recDmg(victim, atkKey) { (victim.hits || (victim.hits = {}))[atkKey] = 1; } // mémorise qui a touché (pour les assists)
+function creditKill(victimEnt, killerEnt) {
+  const vk = statKey(victimEnt), kk = statKey(killerEnt);
+  if (STATS[kk]) STATS[kk].k++; if (STATS[vk]) STATS[vk].d++;
+  const hits = victimEnt.hits || {}; for (const h in hits) if (h !== kk && STATS[h]) STATS[h].a++; // assists aux autres tireurs
+  victimEnt.hits = {};
+}
+const keys = {}; let yaw = Math.PI, pitch = 0, locked = false, firing = false, fireTimer = 0, reloading = 0;
+let moveStepT = 0;
+
+function makeBot(entry, team, name) {
+  const spr = makeSprite(entry, team === "en" ? 0xff5a5a : 0x5ad0ff); scene.add(spr.mesh); scene.add(spr.ring);
+  return { isBot: true, team, name, x: 0, z: 0, hp: 100, alive: true, spr, mesh: spr.mesh, tex: spr.tex, ring: spr.ring, entry, w: spr.mesh.userData.w,
+    fireCD: 0, react: 0, moving: false, frame: 0, animT: 0, goal: null, goalT: 0, strafe: 1, see: null, seeT: 0,
+    skill: 0.8, role: "push", post: null, lane: null, ammo: 25, reloadCD: 0, lastSeen: null, searchT: 0, aimAt: null, faceAngle: null, avoidDir: Math.random() < 0.5 ? 1 : -1 };
+}
+function setBotFrame(e, dt) {
+  if (e.net && e.ntx != null) { const k = Math.min(1, dt * 13); e.x += (e.ntx - e.x) * k; e.z += (e.ntz - e.z) * k; }   // interpolation réseau (lissage)
+  const r = e.entry; e.mesh.position.set(e.x, e.mesh.position.y, e.z); e.ring.position.set(e.x, 0.04, e.z);
+  // billboard : le plan fait toujours face à la caméra…
+  const toCam = Math.atan2(camera.position.x - e.x, camera.position.z - e.z);
+  e.mesh.rotation.y = toCam;
+  // …mais la FRAME affichée dépend de l'orientation du bot vis-à-vis de la caméra (technique DOOM)
+  const face = e.faceAngle == null ? (e.team === "att" ? Math.PI : 0) : e.faceAngle;
+  let rel = face - toCam; rel = Math.atan2(Math.sin(rel), Math.cos(rel)); const a = Math.abs(rel);
+  let dir, mirror = false;
+  if (a < Math.PI / 4) dir = "down";          // le bot regarde vers nous → on voit sa face
+  else if (a > 3 * Math.PI / 4) dir = "up";    // il nous tourne le dos → on voit son dos
+  else { dir = "right"; mirror = rel < 0; }    // de profil (gauche = droite en miroir)
+  if (e.moving) { e.animT += dt; if (e.animT > 0.11) { e.animT = 0; e.frame++; } } else e.frame = 0;
+  const arr = (r.dirs[dir] && r.dirs[dir].length) ? r.dirs[dir] : r.dirs.down;
+  const still = dir === "up" ? (r.dirs.up[0] ?? r.dirs.idle) : dir === "right" ? (r.dirs.right[0] ?? r.dirs.idle) : r.dirs.idle;
+  e.tex.offset.x = (e.moving ? arr[e.frame % arr.length] : still) / r.n;
+  e.mesh.scale.x = (mirror ? -1 : 1) * Math.abs(e.mesh.scale.x);
+}
+
+// ===================== entrées =====================
+addEventListener("keydown", e => { keys[e.code] = true; if (e.code === "Space" || e.code === "Tab") e.preventDefault(); if (e.code === "KeyR") reload(); if (e.code === "Digit1") equip("op"); if (e.code === "Digit2") equip("pistol"); if (e.code === "Digit3") equip("vandal"); if (e.code === "Tab") showBoard(true); if (e.code === "Escape") { e.preventDefault(); settingsOpen ? closeSettings(true) : openSettings(); } });
+addEventListener("keyup", e => { keys[e.code] = false; if (e.code === "Tab") showBoard(false); });
+$("cv").addEventListener("click", () => { if (roundState !== "idle" && !locked) $("cv").requestPointerLock?.(); });
+document.addEventListener("pointerlockchange", () => {
+  locked = document.pointerLockElement === $("cv");
+  if (locked) Snd.resume();
+  else { setADS(false); if (!settingsOpen && roundState !== "idle" && $("over").hidden && $("start").hidden && $("lobby").hidden) openSettings(); } // Échap libère la souris → pause/paramètres
+});
+addEventListener("mousemove", e => {
+  if (!locked) return;
+  const adsMul = ads ? 0.42 * SETTINGS.ads : 1, inv = SETTINGS.invertY ? -1 : 1;
+  yaw -= e.movementX * 0.0022 * SETTINGS.sensX * adsMul;
+  pitch = clamp(pitch - e.movementY * 0.0020 * SETTINGS.sensY * adsMul * inv, -1.4, 1.4);
+});
+addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("wheel", () => { if (locked) { const order = ["op", "pistol", "vandal"]; equip(order[(order.indexOf(curW) + 1) % order.length]); } });
+addEventListener("mousedown", e => {
+  if (player && !player.alive && roundState !== "idle") { if (e.button === 0) specTarget++; return; } // mort → clic = coéquipier suivant
+  if (!locked) return;
+  if (e.button === 0) { if (W().auto) firing = true; else tryShoot(); } else if (e.button === 2) setADS(!ads);   // clic droit = bascule la lunette (pas besoin de maintenir)
+});
+addEventListener("mouseup", e => { if (e.button === 0) firing = false; });
+function tryShoot() { if (roundState === "live" && player && player.alive && fireTimer <= 0 && reloading <= 0) shoot(); }
+// ---- spectateur (à la mort, on suit un allié vivant) ----
+let specTarget = 0;
+function livingAllies() { return entities.filter(e => e.team === "att" && e.alive); }
+function spectateCam() {
+  RIG.visible = false; $("spectate").hidden = false;
+  const al = livingAllies();
+  if (al.length) {
+    const t = al[specTarget % al.length], a = t.faceAngle == null ? Math.PI : t.faceAngle;
+    camera.position.set(t.x - Math.sin(a) * 4.6, 3.2, t.z - Math.cos(a) * 4.6);
+    camera.lookAt(t.x, 1.45, t.z); $("specName").textContent = t.name;
+  } else { camera.position.set(0, 44, 58); camera.lookAt(0, 0, -4); $("specName").textContent = "vue d'ensemble"; }
+}
+
+function refreshGun() { gunR.visible = !ads && curW === "vandal"; gunS.visible = !ads && curW === "op"; gunP.visible = !ads && curW === "pistol"; }
+function equip(k) { if (!WEAPONS[k] || curW === k || reloading > 0) return; curW = k; ads = false; camera.fov = BASEFOV; camera.updateProjectionMatrix(); $("scope").hidden = true; refreshGun(); updateHUD(); }
+function setADS(on) { const w = W(); ads = !!(on && w.ads && player && player.alive && locked && roundState === "live"); camera.fov = ads ? 32 : BASEFOV; camera.updateProjectionMatrix(); $("scope").hidden = !ads; refreshGun(); }
+function reload() { const a = arms[curW], w = W(); if (reloading > 0 || a.mag >= w.magMax || a.reserve <= 0 || !player.alive) return; reloading = w.reloadT; w.rel(); }
+
+// ===================== tir =====================
+const fwd = new THREE.Vector3(), rgt = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+function shoot() {
+  const a = arms[curW], w = W();
+  if (a.mag <= 0) { reload(); return; }
+  a.mag--; fireTimer = w.fireCD; gunKick = w.kick; w.flash[0].material.opacity = 1; w.flash[1].material.opacity = 1; w.snd();
+  if (online) Net.relay({ k: "shot" });   // FX de tir chez les autres
+  const wasAds = ads; if (curW === "op") setADS(false);  // l'Operator sort de lunette après le tir
+  camera.getWorldDirection(fwd);
+  // dispersion : visée parfaite si sniper scopé, large à la hanche, pénalité en mouvement
+  const moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
+  let sp = (wasAds ? w.spread : w.hip) * (keys.ShiftLeft || keys.ShiftRight ? 0.5 : 1) + (moving && !wasAds ? 0.02 : 0);
+  const dx = fwd.x + rand(-sp, sp), dy = fwd.y + rand(-sp, sp), dz = fwd.z + rand(-sp, sp);
+  const l = Math.hypot(dx, dy, dz), nx = dx / l, ny = dy / l, nz = dz / l;
+  const ox = camera.position.x, oy = camera.position.y, oz = camera.position.z;
+  const tWall = rayWall(ox, oy, oz, nx, ny, nz, w.range);
+  let bestT = tWall, hitE = null;
+  for (const e of entities) { if (!e.alive || e.team !== "en") continue; const t = rayEnemyT(ox, oy, oz, nx, ny, nz, e, 0.42); if (t < bestT) { bestT = t; hitE = e; } }
+  if (hitE) {
+    const hy = oy + ny * bestT, head = hy >= 1.45, dmg = head ? w.dmgHead : w.dmgBody;
+    showHit(head); head ? Snd.head() : Snd.hit();
+    if (online) {
+      if (hitE.human) Net.relay({ k: "hit", target: hitE.netid, dmg, head, by: netId });      // l'humain touché applique lui-même
+      else if (isHost) { hitE.hp -= dmg; if (hitE.hp <= 0) onlineKill(hitE, netId, head); }     // bot : l'hôte fait autorité
+      else Net.relay({ k: "hitbot", id: hitE.netid, dmg, head, by: netId });
+    } else {
+      recDmg(hitE, YOU_KEY); hitE.hp -= dmg; if (hitE.hp <= 0) killBot(hitE, player, head);
+    }
+  } else if (!w.melee) tracerMiss(ox, oy, oz, nx, ny, nz, bestT);
+}
+const tracers = [];
+function tracerMiss(ox, oy, oz, nx, ny, nz, t) { const R = W().range, tt = Math.min(t, R); const p = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), new THREE.MeshBasicMaterial({ color: 0xffe08a })); p.position.set(ox + nx * tt, oy + ny * tt, oz + nz * tt); scene.add(p); tracers.push({ m: p, life: 0.05 }); }
+
+function showHit(head) { const h = $("hitm"); h.className = "hitm" + (head ? " hs" : ""); h.style.transition = "none"; h.style.opacity = "1"; requestAnimationFrame(() => { h.style.transition = "opacity .3s"; h.style.opacity = "0"; }); }
+const TEAMCOL = (t) => t === "att" ? "#5fe0f0" : "#ff7a7a";
+// kill feed type Valorant : tueur ⟶ victime (noms colorés par équipe), tête = carte rouge ; nouvelle entrée en haut
+function killFeed(kName, vName, vTeamLocal, head) {
+  const f = $("feed"); const kTeam = vTeamLocal === "en" ? "att" : "en", esc = (s) => String(s).replace(/</g, "&lt;");
+  const d = document.createElement("div"); d.className = "kf" + (head ? " head" : "");
+  d.innerHTML = (kName ? `<span style="color:${TEAMCOL(kTeam)}">${esc(kName)}</span>` : "") + `<span class="kf-ic">${head ? "✸" : "⟶"}</span><span style="color:${TEAMCOL(vTeamLocal)}">${esc(vName)}</span>`;
+  f.prepend(d); setTimeout(() => d.remove(), 5500); while (f.children.length > 6) f.lastChild.remove();
+}
+function feed(txt, hs) { const f = $("feed"); const d = document.createElement("div"); d.className = "kf" + (hs ? " head" : ""); d.textContent = txt; f.prepend(d); setTimeout(() => d.remove(), 5000); while (f.children.length > 6) f.lastChild.remove(); }
+
+// ===================== bots IA =====================
+function killBot(e, killer, head) {
+  e.alive = false; e.mesh.visible = false; e.ring.visible = false; Snd.death();
+  creditKill(e, killer);
+  const kn = killer === player ? "Toi" : (killer && killer.name) || "?";
+  killFeed(kn, e.name, e.team, head);
+  if (killer === player) { roundKills++; Snd.streak(roundKills); showKillBadge(roundKills); }  // série de kills du joueur
+  checkRound();
+}
+// badge de série (skull avec anneaux) + son d'annonce selon le nombre de kills de la manche
+let badgeT = null;
+function showVB(html, ms) {   // affiche une bannière transitoire (série, clutch)
+  const b = $("vb"); b.innerHTML = html; b.hidden = false;
+  b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+  clearTimeout(badgeT); badgeT = setTimeout(() => { b.hidden = true; }, ms);
+}
+function showKillBadge(n) {   // bannière de série style Valorant (à partir de 2 kills)
+  if (n < 2) return;
+  if (n >= 5) showVB('<div class="vb-ace teal"><div class="gem"></div><div class="bar"></div><div class="t">ACE</div><div class="bar"></div></div>', 2800);
+  else showVB('<div class="vb-streak">' + (n === 4 ? "QUADRA KILL" : n === 3 ? "TRIPLE KILL" : "DOUBLE KILL") + '</div>', 1700);
+}
+function showClutch() { showVB('<div class="vb-clutch"><div class="bar"></div><div class="t">CLUTCH</div><div class="bar"></div></div>', 2200); }
+function nearestFoe(e) { let best = null, bd = 1e9; for (const o of entities) { if (!o.alive || o.team === e.team) continue; const d = Math.hypot(o.x - e.x, o.z - e.z); if (d < bd) { bd = d; best = o; } } if (player.alive && player.team !== e.team) { const d = Math.hypot(player.x - e.x, player.z - e.z); if (d < bd) { bd = d; best = { x: player.x, z: player.z, isPlayer: true }; } } return { o: best, d: bd }; }
+function botMove(e, tx, tz, spd, dt) {
+  let dx = tx - e.x, dz = tz - e.z; const l = Math.hypot(dx, dz);
+  if (l < 0.3) { e.moving = false; return; }
+  dx /= l; dz /= l;
+  // évitement d'obstacle : si un mur est proche devant, pivoter la direction pour glisser le long
+  const look = 2.2, s = e.avoidDir || 1;
+  if (rayWall(e.x, 1.0, e.z, dx, 0, dz, look) < look) {
+    const rot = (a) => { const ca = Math.cos(a), sa = Math.sin(a); return [dx * ca - dz * sa, dx * sa + dz * ca]; };
+    let [ax, az] = rot(1.15 * s);
+    if (rayWall(e.x, 1.0, e.z, ax, 0, az, look) < look) { [ax, az] = rot(-1.15 * s); e.avoidDir = -s; } // ce côté bloqué → tenter l'autre
+    dx = ax; dz = az;
+  }
+  const ox = e.x, oz = e.z;
+  e.x += dx * spd * dt; e.z += dz * spd * dt; resolve(e, 0.45);
+  if (Math.hypot(e.x - ox, e.z - oz) < spd * dt * 0.25) e.avoidDir = -s; // n'a pas avancé → inverser le contournement
+  e.moving = true; if (e.aimAt == null) e.faceAngle = Math.atan2(dx, dz);
+}
+// point de repli derrière la couverture haute la plus proche, à l'opposé de l'ennemi
+function nearestCover(e, foe) {
+  let best = null, bd = 1e9;
+  for (const w of WALLS) { if (w.h < 1.5) continue; const cx = (w.x0 + w.x1) / 2, cz = (w.z0 + w.z1) / 2, d = Math.hypot(cx - e.x, cz - e.z); if (d < bd && d < 16) { bd = d; best = { cx, cz, w }; } }
+  if (!best) return null;
+  const nx = best.cx - foe.x, nz = best.cz - foe.z, l = Math.hypot(nx, nz) || 1;
+  const hw = (best.w.x1 - best.w.x0) / 2 + 1, hd = (best.w.z1 - best.w.z0) / 2 + 1;
+  return { x: best.cx + nx / l * hw, z: best.cz + nz / l * hd };
+}
+function updateBot(e, dt) {
+  if (!e.alive) return;
+  e.fireCD -= dt; e.reloadCD = Math.max(0, (e.reloadCD || 0) - dt);
+  // mode évasion : coincé → filer vers la direction la plus dégagée (plus de bots bloqués dans un mur)
+  if (e.escape) {
+    e.escape.t -= dt; botMove(e, e.escape.x, e.escape.z, 5.0, dt);
+    if (e.escape.t <= 0 || Math.hypot(e.escape.x - e.x, e.escape.z - e.z) < 1.3) e.escape = null;
+    setBotFrame(e, dt); return;
+  }
+  const { o: foe, d } = nearestFoe(e);
+  const los = foe ? hasLOS(e.x, e.z, foe.x, foe.z) : false;
+  if (foe && los) {
+    if (e.seeT === 0) e.react = rand(0.07, 0.17) * (1.3 - e.skill); // réaction quasi-humaine, rapide
+    e.seeT += dt; e.react -= dt; e.lastSeen = { x: foe.x, z: foe.z }; e.searchT = 0;
+    e.aimAt = foe; e.faceAngle = Math.atan2(foe.x - e.x, foe.z - e.z); // pré-visée sur la cible
+    const cov = nearestCover(e, foe);
+    // jiggle-peek : sortir plus qu'on ne se cache → met la pression comme un vrai joueur
+    e.peekT = (e.peekT || 0) - dt;
+    if (e.peekT <= 0) { e.peeking = !e.peeking; e.peekT = e.peeking ? rand(1.1, 2.3) : rand(0.3, 0.6); }
+    if (e.reloadCD > 0) e.peeking = false; // on se replie pour recharger
+    const canShoot = e.react <= 0 && e.fireCD <= 0 && e.reloadCD <= 0 && d < 110;
+    if (cov && !e.peeking) {
+      botMove(e, cov.x, cov.z, 4.7, dt); // repli derrière la couverture
+    } else if (d > 26) botMove(e, foe.x, foe.z, 4.1, dt);
+    else if (d < 9) botMove(e, e.x * 2 - foe.x, e.z * 2 - foe.z, 3.9, dt);
+    else if (e.fireCD > 0.06 && !canShoot) { // micro-strafe entre les tirs
+      e.goalT -= dt; if (e.goalT <= 0) { e.strafe *= -1; e.goalT = rand(0.35, 0.8); }
+      const px = -(foe.z - e.z), pz = (foe.x - e.x), l = Math.hypot(px, pz) || 1; botMove(e, e.x + px / l * e.strafe * 2.4, e.z + pz / l * e.strafe * 2.4, 3.1, dt);
+    } else e.moving = false; // COUNTER-STRAFE : on s'arrête net pour tirer → précis
+    // tir : seulement quand on est exposé (peek) et bien plus précis à l'arrêt
+    if (canShoot && (e.peeking || !cov)) {
+      e.ammo = (e.ammo == null ? 25 : e.ammo) - 1; e.fireCD = rand(0.09, 0.13); Snd.shot(0.13 + 0.09 / (1 + d * 0.05));
+      let hit = e.skill * (1 - d / 200) * (e.moving ? 0.55 : 1) * (e.seeT > 0.28 ? 1 : 0.6);  // beaucoup plus précis à l'arrêt
+      hit = clamp(hit, 0.1, 0.97);
+      if (Math.random() < hit) {
+        const head = Math.random() < 0.2 * e.skill * (e.moving ? 0.5 : 1);  // vise la tête comme un bon joueur
+        const dmg = head ? 150 : Math.round(rand(30, 44) * (d > 50 ? 0.85 : 1));
+        if (foe.isPlayer) hurtPlayer(dmg, head, e);
+        else if (online && foe.human) Net.relay({ k: "hit", target: foe.netid, dmg, head, by: e.name });  // bot hôte → humain distant
+        else { recDmg(foe, statKey(e)); foe.hp -= dmg; if (foe.hp <= 0) { if (online) onlineKill(foe, e.name, head); else killBot(foe, e, head); } }
+      }
+      if (e.ammo <= 0) { e.reloadCD = 2.0; e.ammo = 25; }
+    }
+  } else {
+    e.seeT = 0; e.aimAt = null; e.searchT = (e.searchT || 0) + dt;
+    if (e.lastSeen && e.searchT < 3.5) { // va vérifier la dernière position connue
+      botMove(e, e.lastSeen.x, e.lastSeen.z, 4.1, dt);
+      if (Math.hypot(e.lastSeen.x - e.x, e.lastSeen.z - e.z) < 2.2) e.lastSeen = null;
+    } else { // pas d'ennemi en vue : avancer / patrouiller (plus de mouvement = plus d'action)
+      e.goalT -= dt;
+      if (!e.goal || e.goalT <= 0 || Math.hypot(e.goal.x - e.x, e.goal.z - e.z) < 2.5) {
+        const pushPoint = () => { const lane = e.lane ?? LANES[(Math.random() * LANES.length) | 0]; const zside = e.team === "att" ? rand(-28, -4) : rand(4, 28); return { x: lane + rand(-4, 4), z: zside }; };
+        // les « holders » patrouillent : la moitié du temps leur poste, sinon un point avancé → ils bougent
+        if (e.role === "hold" && e.post && Math.random() < 0.5) { e.goal = { x: e.post.x + rand(-3, 3), z: e.post.z + rand(-3, 3) }; e.goalT = rand(1.4, 2.8); }
+        else { e.goal = pushPoint(); e.goalT = rand(2.0, 3.6); }
+      }
+      const atPost = e.role === "hold" && e.goal && Math.hypot(e.goal.x - e.x, e.goal.z - e.z) < 2.0;
+      if (atPost) { e.moving = false; e.faceAngle = e.team === "att" ? Math.PI : 0; } // tient brièvement l'angle
+      else botMove(e, e.goal.x, e.goal.z, e.role === "hold" ? 4.6 : 4.1, dt);
+    }
+  }
+  // anti-blocage : si peu de progrès, inverser le contournement et reprendre un autre objectif
+  e.stuckT = (e.stuckT || 0) + dt;
+  if (e.stuckT > 0.6) {
+    const moved = Math.hypot(e.x - (e.lx ?? e.x), e.z - (e.lz ?? e.z)); e.lx = e.x; e.lz = e.z; e.stuckT = 0;
+    if (moved < 0.4) {   // vraiment coincé → mode évasion vers la direction la plus dégagée
+      let bestA = 0, bestClear = -1;
+      for (let k = 0; k < 10; k++) { const a = k / 10 * TAU + Math.random() * 0.3, cl = rayWall(e.x, 1.0, e.z, Math.sin(a), 0, Math.cos(a), 6); if (cl > bestClear) { bestClear = cl; bestA = a; } }
+      e.escape = { x: e.x + Math.sin(bestA) * 4.5, z: e.z + Math.cos(bestA) * 4.5, t: 0.8 }; e.avoidDir = -(e.avoidDir || 1); e.goal = null; if (!(los && foe)) e.lastSeen = null;
+    } else if (moved < 0.9) e.avoidDir = -(e.avoidDir || 1);
+  }
+  setBotFrame(e, dt);
+}
+
+// ===================== joueur =====================
+let pHP = 100, pArmor = 50;
+// ---- retour visuel quand on est touché ----
+let dmgHideT = null;
+function hitFlash() { const f = $("dmgflash"); f.classList.remove("hit"); void f.offsetWidth; f.classList.add("hit"); }
+function showDamageDir(fx, fz) {
+  if (fx == null) return;
+  const a = Math.atan2(fx - player.x, fz - player.z), look = yaw + Math.PI;   // direction de l'attaquant vs ma visée
+  let rel = a - look; rel = Math.atan2(Math.sin(rel), Math.cos(rel));          // 0 = devant moi
+  const el = $("dmgind"); el.style.transform = "rotate(" + (rel * 180 / Math.PI) + "deg)";
+  el.classList.add("show"); clearTimeout(dmgHideT); dmgHideT = setTimeout(() => el.classList.remove("show"), 650);
+}
+function hurtPlayer(dmg, head, attacker) {
+  if (!player.alive) return;
+  if (attacker) recDmg(player, statKey(attacker));
+  if (pArmor > 0) { const ab = Math.min(pArmor, dmg * 0.5); pArmor -= ab; dmg -= ab; }
+  pHP -= dmg; hitFlash(); if (attacker) showDamageDir(attacker.x, attacker.z);
+  $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,.5)"; setTimeout(() => $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,0)", 220);
+  if (pHP <= 0) {
+    pHP = 0; player.alive = false;
+    if (online) { killFeed(attacker ? attacker.name : "?", "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: attacker ? attacker.name : null, head }); if (isHost) checkOnlineRound(); }
+    else { if (attacker) creditKill(player, attacker); killFeed(attacker ? attacker.name : null, "Toi", "att", head); checkRound(); }
+  }
+}
+
+// ===================== manches =====================
+function spawnTeams() {
+  for (const e of entities) { scene.remove(e.mesh); scene.remove(e.ring); }
+  entities = [];
+  const foes = ["Vex", "Rook", "Kato", "Nyx", "Ghost", "Sable", "Zephyr"]; let fi = 0;
+  // côté joueur = attaquants (sud), ennemis = défenseurs (nord) — alternance simple
+  const spread = (i, n) => clamp((i - (n - 1) / 2) * 8, -26, 26);
+  player = { team: "att", alive: true, x: spread(0, teamSize), z: SPAWN.att.z, y: 0, vy: 0, isPlayer: true };
+  pHP = 100; pArmor = 50; reloading = 0; yaw = SPAWN.att.yaw; pitch = 0;
+  arms.vandal = { mag: 25, reserve: 75 }; arms.op = { mag: 5, reserve: 15 }; arms.pistol = { mag: 6, reserve: 24 };   // plein des armes
+  curW = "vandal"; ads = false; camera.fov = BASEFOV; camera.updateProjectionMatrix(); $("scope").hidden = true; refreshGun();
+  roundKills = 0; $("vb").hidden = true;   // série de la manche remise à zéro
+  const POSTS = [{ x: 26, z: -6 }, { x: -26, z: -6 }, { x: 0, z: -20 }, { x: 14, z: -22 }, { x: -14, z: -22 }];
+  const skillOf = () => rand(0.86, 0.995);   // niveau élevé : vraie compétition
+  // alliés = attaquants, poussent par des couloirs avec le joueur
+  for (let i = 1; i < teamSize; i++) { const b = makeBot(ROSTER[i % ROSTER.length], "att", "Allié " + i); b.x = spread(i, teamSize); b.z = SPAWN.att.z - rand(0, 3); b.role = "push"; b.lane = LANES[i % LANES.length]; b.skill = skillOf(); entities.push(b); }
+  // ennemis = défenseurs : la plupart tiennent un site/angle, 1 roam
+  for (let i = 0; i < teamSize; i++) { const b = makeBot(ROSTER[(ROSTER.length - 1 - i) % ROSTER.length], "en", foes[fi++ % foes.length]); b.x = spread(i, teamSize); b.z = SPAWN.def.z + rand(0, 3); b.skill = skillOf(); if (i < Math.ceil(teamSize * 0.6)) { b.role = "push"; b.lane = LANES[(Math.random() * LANES.length) | 0]; } else { b.role = "hold"; b.post = POSTS[i % POSTS.length]; } entities.push(b); }   // majorité agressive = plus d'action
+  stat(YOU_KEY, "att", "Toi", ROSTER[0]);                       // le joueur dans le tableau
+  for (const e of entities) stat(statKey(e), e.team, e.name, e.entry);
+  buildTopbar();                                                // bandeaux d'équipe en haut
+}
+function teamAlive(team) { let n = 0; if (team === "att" && player.alive) n++; for (const e of entities) if (e.alive && e.team === team) n++; return n; }
+function startRound() {
+  roundNum++; spawnTeams(); roundState = "freeze"; roundT = 2.0; oneLeftPlayed = false; roundClock = 120;
+  $("sRnd").textContent = "Manche " + roundNum; updateHUD();
+  banner("MANCHE " + roundNum, currentMapName + " · " + teamSize + "v" + teamSize, "");
+  Snd.start();
+  if (!locked) $("cv").requestPointerLock?.();
+}
+let roundEnded = false, oneLeftPlayed = false;
+function checkRound() {
+  if (roundState !== "live" || roundEnded) return;
+  const en = teamAlive("en"), att = teamAlive("att");
+  if (en === 1 && !oneLeftPlayed) { oneLeftPlayed = true; Snd.oneLeft(); } // clutch : 1 ennemi restant
+  if (en === 0) endRound(true); else if (att === 0) endRound(false);
+}
+function endRound(win) {
+  roundEnded = true; roundState = "end"; roundT = 2.6;
+  if (win) { score.you++; Snd.roundWin(); banner("MANCHE GAGNÉE", "", "good");
+    if (teamSize > 1 && player.alive && teamAlive("att") === 1) showClutch(); }   // dernier survivant de l'équipe → CLUTCH
+  else { score.en++; Snd.roundLose(); banner("MANCHE PERDUE", "", "bad"); }
+  updateHUD();
+  if (score.you >= 5 || score.en >= 5) { matchOver = true; }
+}
+// bannière de résultat (fin de match) + MVP si le joueur est top fragger
+function isMVP() { const you = (STATS[YOU_KEY] || { k: -1 }).k; let top = -1; for (const s of Object.values(STATS)) if (s.k > top) top = s.k; return you >= top && you > 0; }
+function resultBanner(win) {
+  const res = '<div class="vb-res ' + (win ? "win" : "lose") + '"><b>' + (win ? "VICTORY" : "DEFEAT") + '</b><i>' + score.you + " – " + score.en + '</i></div>';
+  return res + ((win && isMVP()) ? '<div class="vb-mvp"><i class="l"></i>MVP<i class="r"></i></div>' : "");
+}
+function banner(txt, sub, cls) { const b = $("banner"); b.className = "banner show " + (cls || ""); b.innerHTML = txt + (sub ? "<small>" + sub + "</small>" : ""); setTimeout(() => b.classList.remove("show"), 1600); }
+
+// ===================== HUD =====================
+function updateHUD() {
+  if (online) ensureOnlineTopbar();
+  $("sYou").textContent = score.you; $("sEn").textContent = score.en;
+  const cl = Math.max(0, Math.ceil(roundClock)), mm = (cl / 60 | 0), ss = cl % 60;
+  $("tClock").textContent = mm + ":" + String(ss).padStart(2, "0"); $("tClock").classList.toggle("low", cl <= 20 && roundState === "live");
+  updateTopbar();
+  $("hpn").textContent = Math.max(0, Math.round(pHP)); $("hpn").classList.toggle("low", pHP <= 30);
+  $("armn").textContent = Math.max(0, Math.round(pArmor));
+  const a = arms[curW];
+  $("mag").textContent = reloading > 0 ? "…" : a.mag; $("res").textContent = "/ " + a.reserve;
+  $("ammoBox").classList.toggle("reload", reloading > 0);
+  $("wName").textContent = W().name;
+  $("wOp").classList.toggle("on", curW === "op"); $("wPistol").classList.toggle("on", curW === "pistol"); $("wVandal").classList.toggle("on", curW === "vandal");
+  $("timer").textContent = roundState === "freeze" ? "Préparez-vous…" : (player && !player.alive && roundState === "live") ? "Éliminé — ton équipe se bat" : "";
+  // crosshair (caché quand on vise à la lunette)
+  $("cross").style.opacity = ads ? "0" : "1";
+  const sp = 6 + (firing ? 7 : 0) + ((keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD) ? 3 : 0);
+  const c = $("cross"); c.querySelector(".l").style.left = (13 - sp) + "px"; c.querySelector(".r").style.right = (13 - sp) + "px"; c.querySelector(".t").style.top = (13 - sp) + "px"; c.querySelector(".b").style.bottom = (13 - sp) + "px";
+}
+// ---- scoreboard ----
+function teamRows(team) { return Object.values(STATS).filter(s => s.team === team).sort((a, b) => b.k - a.k || a.d - b.d); }
+function aliveOf(s) { if (s.name === "Toi") return !!(player && player.alive); const e = entities.find(x => x.team === s.team && x.name === s.name); return e ? e.alive : true; }
+function pingDot(p) { return p < 40 ? "#54e089" : p < 80 ? "#e8c24a" : "#e05454"; }
+function renderBoard() {
+  $("bdYou").textContent = score.you; $("bdEn").textContent = score.en; $("bdRnd").textContent = "Manche " + roundNum;
+  const hdr = '<div class="bd-row hdr"><span></span><span>NOM</span><span class="bd-col">K</span><span class="bd-col">D</span><span class="bd-col">A</span><span class="bd-ping">PING</span></div>';
+  for (const [team, el] of [["att", "bdAtt"], ["en", "bdEn2"]]) {
+    const rows = teamRows(team).map(s => {
+      const me = s.name === "Toi", dead = !aliveOf(s), pic = PORTRAITS[s.entry && s.entry.name] || "";
+      return `<div class="bd-row${me ? " me" : ""}${dead ? " bd-dead" : ""}">`
+        + `<img class="bd-pic" src="${pic}" alt="">`
+        + `<span class="bd-name">${s.name}${me ? '<span class="tag">toi</span>' : ""}</span>`
+        + `<span class="bd-col k">${s.k}</span><span class="bd-col d">${s.d}</span><span class="bd-col a">${s.a}</span>`
+        + `<span class="bd-ping">${s.ping}<b style="background:${pingDot(s.ping)}"></b></span></div>`;
+    }).join("");
+    $(el).innerHTML = hdr + rows;
+  }
+}
+function showBoard(on) { const b = $("board"); if (on && !matchOver && roundState !== "idle") { renderBoard(); b.hidden = false; } else b.hidden = true; }
+// ---- bandeau du haut (portraits d'équipe + PV) ----
+let teamUnits = { att: [], en: [] };
+function buildTopbar() {
+  teamUnits = { att: [], en: [] };
+  teamUnits.att.push({ name: "Toi", entry: ROSTER[0], isPlayer: true });
+  for (const e of entities) if (e.team === "att") teamUnits.att.push({ name: e.name, entry: e.entry, bot: e });
+  for (const e of entities) if (e.team === "en") teamUnits.en.push({ name: e.name, entry: e.entry, bot: e });
+  for (const [team, el] of [["att", "tAtt"], ["en", "tEn2"]]) {
+    $(el).innerHTML = teamUnits[team].map(u =>
+      `<div class="tp${u.isPlayer ? " me" : ""}"><span class="pic" style="background-image:url('${PORTRAITS[u.entry && u.entry.name] || ""}')"></span><span class="hpbar"><span class="hpfill"></span></span></div>`
+    ).join("");
+    teamUnits[team].forEach((u, i) => { u.el = $(el).children[i]; u.hp = u.el.querySelector(".hpfill"); });
+  }
+}
+function updateTopbar() {
+  for (const team of ["att", "en"]) for (const u of teamUnits[team]) {
+    if (!u.el) continue;
+    const alive = u.isPlayer ? player.alive : u.bot.alive;
+    const hp = u.isPlayer ? pHP : u.bot.hp;
+    u.el.classList.toggle("dead", !alive);
+    u.hp.style.width = clamp(hp, 0, 100) + "%";
+  }
+}
+
+// ===================== boucle =====================
+let last = now();
+function frame() {
+  requestAnimationFrame(frame); const t = now(); let dt = t - last; last = t; if (dt > 0.05) dt = 0.05;
+  if (settingsOpen && !online) { renderer.render(scene, camera); return; }   // pause hors-ligne quand les paramètres sont ouverts
+  if (roundState !== "idle") update(dt);
+  if (!$("board").hidden) renderBoard();   // tableau en direct tant qu'il est ouvert
+  renderer.render(scene, camera);
+}
+function update(dt) {
+  // timers de manche
+  if (online && !isHost) { /* état piloté par le « monde » de l'hôte */ }
+  else if (online && isHost) {
+    if (roundState === "freeze") { roundT -= dt; if (roundT <= 0) { roundState = "live"; roundEnded = false; } }
+    else if (roundState === "live") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endOnlineRound("foe"); } }
+    else if (roundState === "end") { roundT -= dt; if (roundT <= 0) { if (matchOver) return endOnlineMatch(); startOnlineRound(); } }
+  }
+  else if (roundState === "freeze") { roundT -= dt; if (roundT <= 0) { roundState = "live"; roundEnded = false; } }
+  else if (roundState === "live") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endRound(false); } }  // temps écoulé → la défense gagne
+  else if (roundState === "end") { roundT -= dt; if (roundT <= 0) { if (matchOver) return endMatch(); startRound(); } }
+  netTick(dt);
+
+  const canAct = roundState === "live" && player.alive;
+  const dead = !player.alive && roundState !== "idle";
+  if (dead) { spectateCam(); }   // SPECTATEUR : on suit un coéquipier vivant
+  else {
+    RIG.visible = true; $("spectate").hidden = true;
+    // caméra / orientation
+    camera.rotation.y = yaw; camera.rotation.x = pitch;
+    // déplacement joueur
+    if (canAct) {
+      camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
+      rgt.crossVectors(fwd, UP).normalize();
+      let mx = 0, mz = 0;
+      if (keys.KeyW) { mx += fwd.x; mz += fwd.z; } if (keys.KeyS) { mx -= fwd.x; mz -= fwd.z; }
+      if (keys.KeyD) { mx += rgt.x; mz += rgt.z; } if (keys.KeyA) { mx -= rgt.x; mz -= rgt.z; }
+      const walk = keys.ShiftLeft || keys.ShiftRight; const spd = walk ? 3.2 : 6.2;
+      const ml = Math.hypot(mx, mz);
+      if (ml > 0) { mx /= ml; mz /= ml;
+        const steps = 2, sdt = dt / steps;   // sous-pas : évite les à-coups / traversées de murs (plus de « rollback »)
+        for (let s = 0; s < steps; s++) { player.x += mx * spd * sdt; player.z += mz * spd * sdt; resolve(player, 0.4, player.y); }
+        player.x = clamp(player.x, -MAPX + 0.6, MAPX - 0.6); player.z = clamp(player.z, -MAPZ + 0.6, MAPZ - 0.6);
+        if (!walk && player.y <= 0.05) { moveStepT -= dt; if (moveStepT <= 0) { Snd.step(); moveStepT = 0.34; } } }
+      // saut / gravité (on peut monter sur les caisses)
+      const gy = groundY(player.x, player.z), grounded = player.y <= gy + 0.03;
+      if (grounded) { player.y = gy; player.vy = 0; if (keys.Space) player.vy = 6.6; }
+      player.vy -= 16 * dt; player.y += player.vy * dt;
+      const gy2 = groundY(player.x, player.z); if (player.y < gy2) { player.y = gy2; player.vy = 0; } if (player.y < 0) { player.y = 0; player.vy = 0; }
+      // tir
+      fireTimer -= dt; if (reloading > 0) { reloading -= dt; if (reloading <= 0) { const w = W(), a = arms[curW], need = w.magMax - a.mag, take = Math.min(need, a.reserve); a.mag += take; a.reserve -= take; } }
+      if (firing && W().auto && fireTimer <= 0 && reloading <= 0) shoot();  // auto = Vandale seulement
+    }
+    // position caméra = yeux du joueur (hauteur = pieds + EYE, pour le saut)
+    camera.position.set(player.x, (player.y || 0) + EYE, player.z);
+  }
+  // recul visuel + animation de rechargement (sur l'arme équipée)
+  const g = W().gun; gunKick = Math.max(0, gunKick - dt * 0.6);
+  let gdy = 0, grx = gunKick * 1.2, gry = 0, grz = 0, gdz = gunKick;
+  if (reloading > 0) {                                   // rechargement : l'arme plonge, s'incline, puis revient
+    const p = 1 - reloading / W().reloadT;               // progression 0 → 1
+    const s = Math.sin(Math.max(0, Math.min(1, p)) * Math.PI); // cloche 0 → 1 → 0
+    const snap = Math.max(0, (p - 0.82) / 0.18);          // petit « clac » de réinsertion en fin
+    gdy = -0.18 * s; grz = 0.6 * s; gry = 0.24 * s; grx += 0.5 * s - 0.12 * snap; gdz += 0.06 * s;
+  }
+  g.position.set(0, gdy, gdz); g.rotation.set(grx, gry, grz);
+  for (const w of Object.values(WEAPONS)) { w.flash[0].material.opacity = Math.max(0, w.flash[0].material.opacity - dt * 12); w.flash[1].material.opacity = Math.max(0, w.flash[1].material.opacity - dt * 16); }
+  // bots (seulement en live)
+  if (roundState === "live") for (const e of entities) { if (e.net) setBotFrame(e, dt); else updateBot(e, dt); }  // net = piloté par le réseau
+  else for (const e of entities) setBotFrame(e, dt);
+  // tracers
+  for (let i = tracers.length - 1; i >= 0; i--) { tracers[i].life -= dt; if (tracers[i].life <= 0) { scene.remove(tracers[i].m); tracers.splice(i, 1); } }
+  updateHUD();
+}
+function endMatch() {
+  roundState = "idle"; document.exitPointerLock?.(); $("board").hidden = true;
+  const win = score.you > score.en; const card = $("overCard"); card.className = "card";
+  if (win) Snd.victory();
+  $("overTitle").innerHTML = resultBanner(win);
+  $("overSub").textContent = win ? "Tu remportes le match !" : "L'équipe adverse l'emporte.";
+  $("over").hidden = false;
+}
+function endOnlineMatch() {
+  online = false; roundState = "idle"; document.exitPointerLock?.(); $("board").hidden = true; $("spectate").hidden = true;
+  const win = score.you > score.en; const card = $("overCard"); card.className = "card"; if (win) Snd.victory();
+  $("overTitle").innerHTML = resultBanner(win);
+  $("overSub").textContent = win ? "Partie en ligne remportée !" : "Partie en ligne perdue.";
+  $("over").hidden = false; Net.leave();
+}
+
+addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+renderer.setSize(innerWidth, innerHeight);
+
+// ===================== chargement =====================
+async function loadRoster() {
+  let list; try { list = await (await fetch("avatars/roster.json")).json(); } catch { list = []; }
+  if (!list.length) { $("loading").textContent = "Aucun avatar (avatars/roster.json)."; return; }
+  const loaded = await Promise.all(list.map(e => new Promise(res => { texLoader.load("avatars/" + e.name + ".png", tex => { tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.colorSpace = THREE.SRGBColorSpace; res({ ...e, tex }); }, undefined, () => res(null)); })));
+  ROSTER = loaded.filter(Boolean);
+  if (!ROSTER.length) { $("loading").textContent = "Échec du chargement."; return; }
+  await Promise.all(ROSTER.map(e => new Promise(res => {   // portraits (tête croppée) pour le tableau
+    const img = new Image(); img.onload = () => {
+      const s = Math.min(e.cw, Math.round(e.ch * 0.52)), sx = (e.dirs.idle || 0) * e.cw + Math.round((e.cw - s) / 2);
+      const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d");
+      g.imageSmoothingEnabled = true; g.drawImage(img, sx, 0, s, s, 0, 0, 64, 64);
+      PORTRAITS[e.name] = c.toDataURL(); res();
+    }; img.onerror = () => res(); img.src = "avatars/" + e.name + ".png";
+  })));
+  $("loading").hidden = true; $("startBody").hidden = false;
+  avatarsReady = true;
+}
+// splash : visible au moins 3 s ET jusqu'à ce que les avatars soient prêts
+let avatarsReady = false, splashGone = false;
+const splashStart = performance.now();
+function pollSplash() {
+  if (splashGone) return;
+  if (avatarsReady && performance.now() - splashStart >= 3000) {
+    splashGone = true; const s = $("splash"); if (s) { s.classList.add("hide"); setTimeout(() => (s.hidden = true), 650); }
+  } else setTimeout(pollSplash, 150);
+}
+pollSplash();
+function begin(n) { online = false; teamSize = n; Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; roundNum = 0; STATS = {}; buildMap(currentMap === "pearl" ? "haven" : "pearl"); /* alterne la map à chaque partie */ $("start").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("hud").hidden = false; startRound(); }
+for (const b of document.querySelectorAll(".mode")) b.addEventListener("click", () => begin(Number(b.dataset.n)));
+$("again").addEventListener("click", () => { $("over").hidden = true; $("start").hidden = false; });
+
+// ===================== paramètres (Échap) =====================
+let settingsOpen = false;
+function openSettings() { settingsOpen = true; syncSettingsUI(); $("settings").hidden = false; document.exitPointerLock?.(); }
+function closeSettings(resume) { settingsOpen = false; $("settings").hidden = true; if (resume && roundState !== "idle") $("cv").requestPointerLock?.(); }
+function quitToMenu() {
+  if (online) { online = false; Net.leave(); }
+  roundState = "idle"; matchOver = false; document.exitPointerLock?.();
+  $("hud").hidden = true; $("board").hidden = true; $("spectate").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("start").hidden = false;
+}
+function refreshSetVals() {
+  $("setVolV").textContent = Math.round(SETTINGS.vol * 100) + "%"; $("setSxV").textContent = SETTINGS.sensX.toFixed(2);
+  $("setSyV").textContent = SETTINGS.sensY.toFixed(2); $("setAdsV").textContent = SETTINGS.ads.toFixed(2); $("setFovV").textContent = SETTINGS.fov;
+}
+function syncSettingsUI() {
+  $("setVol").value = SETTINGS.vol; $("setSx").value = SETTINGS.sensX; $("setSy").value = SETTINGS.sensY;
+  $("setAds").value = SETTINGS.ads; $("setFov").value = SETTINGS.fov; $("setInv").checked = SETTINGS.invertY; refreshSetVals();
+}
+$("setVol").addEventListener("input", e => { SETTINGS.vol = +e.target.value; applySettings(); refreshSetVals(); saveSettings(); });
+$("setSx").addEventListener("input", e => { SETTINGS.sensX = +e.target.value; refreshSetVals(); saveSettings(); });
+$("setSy").addEventListener("input", e => { SETTINGS.sensY = +e.target.value; refreshSetVals(); saveSettings(); });
+$("setAds").addEventListener("input", e => { SETTINGS.ads = +e.target.value; refreshSetVals(); saveSettings(); });
+$("setFov").addEventListener("input", e => { SETTINGS.fov = +e.target.value; applySettings(); refreshSetVals(); saveSettings(); });
+$("setInv").addEventListener("change", e => { SETTINGS.invertY = e.target.checked; saveSettings(); });
+$("setResume").addEventListener("click", () => closeSettings(true));
+$("setMenu").addEventListener("click", () => { closeSettings(false); quitToMenu(); });
+// ---- lobby 5v5 « en ligne » : on cherche des joueurs, puis on complète avec des bots ----
+let lobbyIv = null, lobbyT = 0;
+function lobbySlot(filled, i) {
+  const pic = (name) => `<span class="pic" style="background-image:url('${PORTRAITS[name] || ""}')"></span>`;
+  if (!filled) return `<div class="lslot empty">Recherche…</div>`;
+  const r = ROSTER[(i * 2 + 1) % ROSTER.length];
+  return `<div class="lslot">${pic(r.name)}<span>Bot <span class="tag">IA</span></span></div>`;
+}
+function renderLobby(filled) {
+  const pic = (name) => `<span class="pic" style="background-image:url('${PORTRAITS[name] || ""}')"></span>`;
+  const att = [`<div class="lslot me">${pic(ROSTER[0].name)}<span>Toi <span class="tag">toi</span></span></div>`];
+  for (let i = 1; i < 5; i++) att.push(lobbySlot(filled, i));
+  const def = []; for (let i = 0; i < 5; i++) def.push(lobbySlot(filled, 5 + i));
+  $("lobbyAtt").innerHTML = att.join(""); $("lobbyDef").innerHTML = def.join("");
+}
+function openLobby() {
+  Snd.resume(); $("start").hidden = true; $("lobby").hidden = false;
+  $("lobbyStatus").textContent = "Recherche de joueurs…"; lobbyT = 15; $("lobbyTimer").textContent = lobbyT; renderLobby(false);
+  clearInterval(lobbyIv);
+  lobbyIv = setInterval(() => { lobbyT--; $("lobbyTimer").textContent = Math.max(0, lobbyT); if (lobbyT <= 0) fillAndStart(); }, 1000);
+}
+function fillAndStart() {
+  clearInterval(lobbyIv);
+  $("lobbyStatus").textContent = "Aucun joueur trouvé — emplacements complétés par des bots.";
+  renderLobby(true);
+  setTimeout(() => begin(5), 1300);
+}
+$("btnOnline").addEventListener("click", openOnlineLobby);
+$("lobbyStart").addEventListener("click", () => { if (Net.ws && Net.ws.readyState === 1) Net.send({ t: "start" }); else fillAndStart(); });
+$("lobbyCancel").addEventListener("click", () => { clearInterval(lobbyIv); clearInterval(lobbyAutoT); lobbyAutoT = null; Net.leave(); $("lobby").hidden = true; $("start").hidden = false; });
+
+// ============================ MULTIJOUEUR (WebSocket) ============================
+// Hôte-autoritaire : le 1er connecté simule les bots + les manches et diffuse le « monde » ; chaque joueur contrôle
+// son propre avatar. Repère canonique partagé (att = sud, def = nord) ; chaque client voit sa perspective en att vs en.
+let online = false, isHost = false, netId = 0, myTeam = "att", myAv = 0, lobbyAutoT = null, netRoom = [];
+let netSendT = 0, worldSendT = 0;
+const remoteById = new Map();                 // id réseau -> entité (humains distants + bots chez l'hôte)
+// URL du serveur temps réel : en HTTPS (derrière nginx TLS) → wss://host/ws ; sinon (HTTP local / VPS par IP) → ws://host:8091
+const SRV = () => (location.protocol === "https:")
+  ? "wss://" + location.host + "/ws"
+  : "ws://" + (location.hostname || "127.0.0.1") + ":8091";
+const mir = (x, z) => myTeam === "def" ? [-x, -z] : [x, z];     // canonique <-> local (involution)
+const cYaw = (y) => myTeam === "def" ? y + Math.PI : y;
+const localTeam = (serverTeam) => serverTeam === myTeam ? "att" : "en";
+const Net = {
+  ws: null,
+  connect() { try { this.ws = new WebSocket(SRV()); } catch (e) { return netFail(); } this.ws.onmessage = (e) => { try { Net.handle(JSON.parse(e.data)); } catch {} }; this.ws.onerror = () => netFail(); this.ws.onclose = () => { if (online) netDropped(); }; },
+  send(o) { try { this.ws && this.ws.readyState === 1 && this.ws.send(JSON.stringify(o)); } catch {} },
+  relay(d) { this.send({ t: "relay", d }); },
+  leave() { try { this.send({ t: "leave" }); this.ws && this.ws.close(); } catch {} this.ws = null; netId = 0; },
+  handle(m) {
+    if (m.t === "welcome") { netId = m.id; this.send({ t: "join", name: "Toi", avatar: myAv }); }
+    else if (m.t === "room") onRoom(m);
+    else if (m.t === "start") beginOnline(m);
+    else if (m.t === "left") removeRemote(m.id);
+    else if (m.t === "relay") onRelay(m.from, m.d);
+  },
+};
+let netFailed = false;
+function openOnlineLobby() {
+  Snd.resume(); $("start").hidden = true; $("lobby").hidden = false; netFailed = false;
+  $("lobbyStatus").textContent = "Connexion au serveur…"; $("lobbyTimer").textContent = "–"; renderLobby(false);
+  Net.connect();
+  setTimeout(() => { if (!netId && !netFailed) netFail(); }, 2800);   // pas de « welcome » → serveur injoignable
+}
+function netFail() {
+  if (netFailed || online) return; netFailed = true; try { Net.ws && Net.ws.close(); } catch {} Net.ws = null;
+  $("lobbyStatus").textContent = "Serveur injoignable — entraînement contre des bots.";
+  openLobby();   // repli : lobby simulé (bots)
+}
+function netDropped() { online = false; alert("Connexion au serveur perdue."); location.reload(); }
+function onRoom(m) {
+  netRoom = m.players; const me = m.players.find((p) => p.id === netId) || {};
+  myTeam = me.team || "att"; isHost = !!me.host;
+  $("lobbyStatus").textContent = isHost ? "Tu es l'hôte — lance quand tu veux (ou attends le remplissage)." : "En attente de l'hôte…";
+  $("lobbyStart").style.display = isHost ? "" : "none";
+  renderOnlineLobby(m.players, m.size || 5);
+  if (isHost && !lobbyAutoT) { let t = 15; $("lobbyTimer").textContent = t; lobbyAutoT = setInterval(() => { t--; $("lobbyTimer").textContent = Math.max(0, t); if (t <= 0) { clearInterval(lobbyAutoT); lobbyAutoT = null; Net.send({ t: "start" }); } }, 1000); }
+}
+function renderOnlineLobby(players, size) {
+  const pic = (av, name, meSlot) => `<div class="lslot${meSlot ? " me" : ""}"><span class="pic" style="background-image:url('${PORTRAITS[(ROSTER[(av || 0) % ROSTER.length] || {}).name] || ""}')"></span><span>${name}${meSlot ? ' <span class="tag">toi</span>' : ' <span class="tag">joueur</span>'}</span></div>`;
+  for (const [team, el] of [["att", "lobbyAtt"], ["def", "lobbyDef"]]) {
+    const ps = players.filter((p) => p.team === team);
+    let html = ps.map((p) => pic(p.avatar, p.name, p.id === netId)).join("");
+    for (let i = ps.length; i < size; i++) html += `<div class="lslot empty">Recherche…</div>`;
+    $(el).innerHTML = html;
+  }
+}
+// ---- démarrage de la partie en ligne ----
+function beginOnline(cfg) {
+  clearInterval(lobbyAutoT); lobbyAutoT = null; clearInterval(lobbyIv);
+  online = true; onlineEnding = false; teamSize = 5; isHost = cfg.hostId === netId; hostBotSeq = 0;
+  const me = cfg.players.find((p) => p.id === netId) || {}; myTeam = me.team || "att"; myAv = me.avatar | 0;
+  Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; roundNum = 0; STATS = {}; entities = [];
+  buildMap((cfg.seed % 2) ? "haven" : "pearl");   // même map pour tous (dérivée du seed serveur)
+  $("start").hidden = true; $("lobby").hidden = true; $("over").hidden = true; $("hud").hidden = true;
+  remoteById.clear();
+  // crée les humains distants (position réelle arrive par le réseau)
+  for (const p of cfg.players) if (p.id !== netId) ensureEnt(p.id, p.team, p.avatar, p.name, true);
+  // l'hôte crée les bots de remplissage (IA locale) et lance la 1re manche ; les autres suivent le « monde »
+  cfg.botsAtt = cfg.botsAtt | 0; cfg.botsDef = cfg.botsDef | 0; onlineCfg = cfg;
+  stat(YOU_KEY, "att", "Toi", ROSTER[myAv % ROSTER.length]);
+  if (isHost) startOnlineRound(); else { roundState = "freeze"; roundNum = 1; respawnSelf(); $("hud").hidden = false; buildTopbarOnline(); }
+}
+let onlineCfg = null, hostBotSeq = 0;
+function respawnSelf() {
+  player = { team: "att", alive: true, x: clamp(rand(-20, 20), -26, 26), z: SPAWN.att.z, y: 0, vy: 0, isPlayer: true };
+  pHP = 100; pArmor = 50; reloading = 0; yaw = SPAWN.att.yaw; pitch = 0;
+  arms.vandal = { mag: 25, reserve: 75 }; arms.op = { mag: 5, reserve: 15 }; arms.pistol = { mag: 6, reserve: 24 }; curW = "vandal"; ads = false;
+  camera.fov = BASEFOV; camera.updateProjectionMatrix(); $("scope").hidden = true; refreshGun(); roundKills = 0; $("vb").hidden = true;
+}
+function ensureEnt(id, serverTeam, avIdx, name, human) {
+  let e = remoteById.get(id); if (e) return e;
+  const entry = ROSTER[(avIdx || 0) % ROSTER.length];
+  e = makeBot(entry, localTeam(serverTeam), name || ("J" + id));
+  e.netid = id; e.net = true; e.human = !!human; e.serverTeam = serverTeam; e.avIdx = avIdx | 0;
+  entities.push(e); remoteById.set(id, e); stat(serverTeam + ":" + (name || id), localTeam(serverTeam), name || ("J" + id), entry);
+  return e;
+}
+function removeRemote(id) { const e = remoteById.get(id); if (!e) return; scene.remove(e.mesh); scene.remove(e.ring); entities = entities.filter((x) => x !== e); remoteById.delete(id); }
+// ---- hôte : manches + bots ----
+function startOnlineRound() {
+  roundNum++; roundState = "freeze"; roundT = 2.0; roundClock = 120; roundEnded = false; oneLeftPlayed = false;
+  respawnSelf();
+  // (re)place les bots de l'hôte
+  for (const e of [...remoteById.values()]) if (!e.human) removeRemote(e.netid);
+  const POSTS = [{ x: 26, z: -6 }, { x: -26, z: -6 }, { x: 0, z: -20 }, { x: 14, z: -22 }, { x: -14, z: -22 }];
+  const mk = (serverTeam, i) => { const id = "b" + (hostBotSeq++); const e = ensureEnt(id, serverTeam, 1 + (i % (ROSTER.length - 1)), "Bot" + i, false); e.net = false; /* IA locale chez l'hôte */ const south = localTeam(serverTeam) === "att"; e.x = clamp((i - 2) * 7, -26, 26); e.z = south ? SPAWN.att.z - rand(0, 3) : SPAWN.def.z + rand(0, 3); e.skill = rand(0.86, 0.995); if (localTeam(serverTeam) === "en") { e.role = "hold"; e.post = POSTS[i % POSTS.length]; } else { e.role = "push"; e.lane = LANES[i % LANES.length]; } return e; };
+  for (let i = 0; i < onlineCfg.botsAtt; i++) mk("att", i);
+  for (let i = 0; i < onlineCfg.botsDef; i++) mk("def", i);
+  $("hud").hidden = false; buildTopbarOnline(); banner("MANCHE " + roundNum, currentMapName + " · 5v5 en ligne", ""); Snd.start();
+  if (!locked) $("cv").requestPointerLock?.();
+  Net.relay({ k: "round", rn: roundNum });   // signale le début de manche
+}
+function buildTopbarOnline() {   // bandeau haut à partir des entités réseau
+  teamUnits = { att: [], en: [] };
+  teamUnits.att.push({ name: "Toi", entry: ROSTER[myAv % ROSTER.length], isPlayer: true });
+  for (const e of entities) teamUnits[e.team === "att" ? "att" : "en"].push({ name: e.name, entry: e.entry, bot: e });
+  for (const [team, el] of [["att", "tAtt"], ["en", "tEn2"]]) {
+    $(el).innerHTML = teamUnits[team].map((u) => `<div class="tp${u.isPlayer ? " me" : ""}"><span class="pic" style="background-image:url('${PORTRAITS[u.entry && u.entry.name] || ""}')"></span><span class="hpbar"><span class="hpfill"></span></span></div>`).join("");
+    teamUnits[team].forEach((u, i) => { u.el = $(el).children[i]; u.hp = u.el.querySelector(".hpfill"); });
+  }
+  teamUnits._n = entities.length;
+}
+function ensureOnlineTopbar() { if (teamUnits._n !== entities.length) buildTopbarOnline(); }   // reconstruit quand des joueurs/bots réseau apparaissent
+// ---- réception réseau ----
+const nameOf = (id) => id === netId ? "Toi" : (typeof id === "string" && !remoteById.has(id)) ? id : (remoteById.get(id) || {}).name || (netRoom.find((p) => p.id === id) || {}).name || "?";
+function takeNetDamage(dmg, head, byId) {
+  if (!player.alive) return;
+  if (pArmor > 0) { const ab = Math.min(pArmor, dmg * 0.5); pArmor -= ab; dmg -= ab; }
+  pHP -= dmg; hitFlash(); const atk = remoteById.get(byId); if (atk) showDamageDir(atk.x, atk.z);
+  $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,.5)"; setTimeout(() => $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,0)", 220);
+  if (pHP <= 0) { pHP = 0; player.alive = false; killFeed(nameOf(byId), "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: byId, head }); if (isHost) checkOnlineRound(); }
+}
+function onRelay(from, d) {
+  if (!d) return;
+  if (d.k === "st") {                              // état d'un joueur distant
+    const e = ensureEnt(from, d.tm, d.av, d.nm, true); const [lx, lz] = mir(d.x, d.z);
+    if (e.ntx == null) { e.x = lx; e.z = lz; } e.ntx = lx; e.ntz = lz;   // cible interpolée (lissage)
+    e.faceAngle = cYaw(d.fa); e.moving = d.mv; e.hp = d.hp; e.alive = d.al;
+    e.mesh.visible = d.al; e.ring.visible = d.al;
+  } else if (d.k === "shot") { Snd.shot(0.16); }   // FX sonore d'un tir distant
+  else if (d.k === "hit") { if (d.target === netId) takeNetDamage(d.dmg, d.head, d.by); }
+  else if (d.k === "hitbot") { if (isHost) { const e = remoteById.get(d.id); if (e && e.alive) { e.hp -= d.dmg; if (e.hp <= 0) onlineKill(e, d.by, d.head); } } }
+  else if (d.k === "dead") { const e = remoteById.get(d.id); const vt = e ? e.team : "en"; if (e) { e.alive = false; e.mesh.visible = false; e.ring.visible = false; } killFeed(nameOf(d.by), nameOf(d.id), vt, d.head); if (d.by === netId) badgeLocal(); if (isHost) checkOnlineRound(); }
+  else if (d.k === "killby") { if (d.by === netId) badgeLocal(); }
+  else if (d.k === "world") { if (!isHost) applyWorld(d); }
+  else if (d.k === "kf") { killFeed(d.kn, d.vn, d.vst === myTeam ? "att" : "en", d.head); }
+  else if (d.k === "round") { if (!isHost && d.rn > roundNum) { roundNum = d.rn; roundState = "freeze"; respawnSelf(); banner("MANCHE " + d.rn, "5 v 5 en ligne", ""); } }
+  else if (d.k === "end") { onlineRoundEndFx(d.winTeam); }
+}
+function badgeLocal() { roundKills++; Snd.streak(roundKills); showKillBadge(roundKills); }
+function onlineKill(e, byId, head) {   // hôte : un bot (ou humain via hit) meurt → feed + crédit
+  e.alive = false; e.mesh.visible = false; e.ring.visible = false; Snd.death();
+  killFeed(nameOf(byId), e.name, e.team, head);
+  Net.relay({ k: "kf", kn: nameOf(byId), vn: e.name, vst: e.serverTeam, head });   // feed aux autres (équipe serveur → locale)
+  if (byId === netId) badgeLocal(); else Net.relay({ k: "killby", by: byId });     // badge au tueur
+  checkOnlineRound();
+}
+function checkOnlineRound() {   // hôte : fin de manche par élimination
+  if (roundState !== "live" || roundEnded) return;
+  const aliveT = (lt) => { let n = 0; if (lt === "att" && player.alive) n++; for (const e of entities) if (e.alive && e.team === lt) n++; return n; };
+  const mine = aliveT("att"), foe = aliveT("en");
+  if (foe === 0) endOnlineRound("mine"); else if (mine === 0) endOnlineRound("foe");
+}
+function endOnlineRound(who) {   // who = "mine"/"foe" du point de vue hôte
+  roundEnded = true; roundState = "end"; roundT = 3.0;
+  const winServer = who === "mine" ? myTeam : (myTeam === "att" ? "def" : "att");
+  if (who === "mine") score.you++; else score.en++;
+  onlineRoundEndFx(winServer);
+  Net.relay({ k: "end", winTeam: winServer });
+  if (score.you >= 5 || score.en >= 5) matchOver = true;
+}
+function onlineRoundEndFx(winServer) {   // seulement effets (le score vient du « monde » de l'hôte, autoritaire)
+  const won = winServer === myTeam;
+  if (won) { Snd.roundWin(); banner("MANCHE GAGNÉE", "", "good");
+    if (player && player.alive && teamAlive("att") === 1) showClutch(); }   // dernier survivant → CLUTCH
+  else { Snd.roundLose(); banner("MANCHE PERDUE", "", "bad"); }
+}
+let onlineEnding = false;
+function applyWorld(d) {   // client : applique le monde de l'hôte (bots + manche)
+  roundState = d.rs; roundClock = d.cl;
+  score.you = (myTeam === "att" ? d.satt : d.sdef); score.en = (myTeam === "att" ? d.sdef : d.satt);
+  const seen = new Set();
+  for (const b of d.bots) { seen.add(b.id); const e = ensureEnt(b.id, b.tm, b.av, "Bot", false); const [lx, lz] = mir(b.x, b.z); if (e.ntx == null) { e.x = lx; e.z = lz; } e.ntx = lx; e.ntz = lz; e.faceAngle = cYaw(b.fa); e.moving = b.mv; e.hp = b.hp; e.alive = b.al; e.mesh.visible = b.al; e.ring.visible = b.al; }
+  for (const e of [...remoteById.values()]) if (!e.human && !seen.has(e.netid)) removeRemote(e.netid);   // bots disparus
+  if (!onlineEnding && (score.you >= 5 || score.en >= 5)) { onlineEnding = true; setTimeout(endOnlineMatch, 2600); }
+}
+// ---- envoi réseau (appelé dans la boucle) ----
+function netTick(dt) {
+  if (!online) return;
+  netSendT -= dt;
+  if (netSendT <= 0) {
+    netSendT = 0.05;   // ~20 Hz
+    const [cx, cz] = mir(player.x, player.z), moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
+    Net.relay({ k: "st", tm: myTeam, av: myAv, nm: "Toi", x: cx, z: cz, y: player.y || 0, fa: cYaw(yaw), mv: !!moving && player.alive, hp: pHP, al: player.alive });
+  }
+  if (isHost) {
+    worldSendT -= dt;
+    if (worldSendT <= 0) {
+      worldSendT = 0.06;
+      const bots = []; for (const e of entities) if (!e.human) { const [cx, cz] = mir(e.x, e.z); bots.push({ id: e.netid, tm: e.serverTeam, av: e.avIdx, x: cx, z: cz, y: e.mesh.position.y || 0, fa: cYaw(e.faceAngle || 0), mv: !!e.moving, hp: e.hp, al: e.alive }); }
+      const satt = myTeam === "att" ? score.you : score.en, sdef = myTeam === "att" ? score.en : score.you;
+      Net.relay({ k: "world", rs: roundState, cl: roundClock, satt, sdef, bots });
+    }
+  }
+}
+
+applySettings(); loadRoster(); frame();
+</script>
+</body>
+</html>
