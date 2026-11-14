@@ -237,7 +237,7 @@
       <p style="margin-top:10px;font-weight:700">Choisis ton format :</p>
       <div class="modes"><button class="mode" data-n="2">2<b>v</b>2</button><button class="mode" data-n="5">5<b>v</b>5</button></div>
       <button class="btn-online" id="btnOnline">5v5 EN LIGNE <small>— rechercher une partie</small></button>
-      <div style="display:flex;gap:8px;margin-top:10px">
+      <div id="editorRow" style="display:flex;gap:8px;margin-top:10px">
         <a class="btn-online" href="editor.html" style="flex:1;text-align:center;text-decoration:none">🛠 Éditeur de map</a>
         <button class="btn-online" id="btnCustom" style="flex:1">🗺 Mes maps</button>
       </div>
@@ -1202,6 +1202,10 @@ for (const b of document.querySelectorAll(".mode")) b.addEventListener("click", 
 $("again").addEventListener("click", () => { $("over").hidden = true; $("start").hidden = false; });
 
 // ---- maps perso (éditeur) ----
+// L'éditeur n'apparaît qu'en LOCAL (localhost) ou si on l'active volontairement (flag localStorage « valotiz_editor=1 »).
+// Sur un VPS public, il est masqué → les joueurs en ligne ne le voient pas.
+const EDITOR_OK = (() => { try { const h = location.hostname; if (h === "localhost" || h === "127.0.0.1" || h === "" || h.endsWith(".local")) return true; return localStorage.getItem("valotiz_editor") === "1"; } catch { return false; } })();
+if (!EDITOR_OK) { const er = $("editorRow"); if (er) er.style.display = "none"; }
 function customStore() { try { return JSON.parse(localStorage.getItem("valotiz_maps") || "{}"); } catch { return {}; } }
 function beginCustom(data, n) {
   if (!data || !data.blocks) { alert("Map invalide."); return; }
@@ -1222,7 +1226,7 @@ function renderCustList() {
 }
 $("btnCustom").addEventListener("click", () => { const l = $("custList"); l.hidden = !l.hidden; if (!l.hidden) renderCustList(); });
 $("custFile").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const d = JSON.parse(rd.result); beginCustom(d); } catch { alert("Fichier de map invalide."); } }; rd.readAsText(f); e.target.value = ""; });
-function tryAutoPlay() { const want = new URLSearchParams(location.search).get("play"); if (want == null) return; const s = customStore(); const d = s["__play__"] || s[want]; if (d && d.blocks) beginCustom(d); }
+function tryAutoPlay() { if (!EDITOR_OK) return; const want = new URLSearchParams(location.search).get("play"); if (want == null) return; const s = customStore(); const d = s["__play__"] || s[want]; if (d && d.blocks) beginCustom(d); }
 
 // ===================== paramètres (Échap) =====================
 let settingsOpen = false;

@@ -133,6 +133,17 @@ Puis sur le VPS :
 
 ---
 
+## Éditeur de map : masqué sur le VPS public
+
+Par défaut, **l'éditeur de map n'apparaît pas sur le VPS** (ni le bouton au menu, ni le fichier `editor.html`) :
+- l'UI n'est montrée que si la page est servie depuis `localhost` (ton PC) ;
+- côté serveur, l'option A met `NO_EDITOR=1` (dans `valotiz-web.service`) et l'option B ajoute une règle nginx
+  `location = /fps/editor.html { return 404; }`.
+
+Donc : tu crées tes maps **en local** (éditeur), tu les testes, puis tu pousses le jeu sur le VPS pour jouer en ligne.
+Pour réactiver l'éditeur sur un serveur (déconseillé en public) : retire `NO_EDITOR=1` du service (option A) ou la
+règle nginx (option B), puis, dans ton navigateur sur ce site, exécute une fois `localStorage.setItem('valotiz_editor','1')`.
+
 ## Logs / dépannage
 
 ```bash
