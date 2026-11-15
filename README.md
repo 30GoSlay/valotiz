@@ -3,21 +3,29 @@
 Un **FPS tactique 3D à sprites 2D** (à la **Valorant**) utilisant les **avatars** de Chapaland/Chapatiz.
 
 **FPS Tactique** (`fps/`) — **2v2 / 5v5**, grande map blockout (bâtiment central + lanes qui cassent la ligne de vue
-spawn-à-spawn). **Deux maps qui alternent à chaque partie** :
-- **Pearl** (froid, aquatique) — dôme d'eau turquoise nuageux, pierre gris-bleu, LED orange, jacaranda violet, arches.
-- **Haven** (monastère himalayen, chaud) — grès/crème, **toits rouges**, **stupa doré**, **drapeaux de prière**, caisses
-  « spike » teal, montagnes à l'horizon.
+spawn-à-spawn). **Deux maps « Station » sci-fi qui alternent à chaque partie** (même structure, collisions, sites et
+spawns — seul le visuel change), habillées à partir du kit modulaire **Ultimate Modular Sci-Fi** (Quaternius, CC0) :
+panneaux muraux tilés (InstancedMesh → ~40 draw calls), colonnes, évents, caisses métal, sol à grille néon, dôme sombre.
+- **Station Alpha** — accent **cyan**, éclairage froid.
+- **Station Bravo** — accent **orange**, éclairage chaud.
 
 En solo la map alterne à chaque partie ; en ligne elle est **dérivée du seed serveur** (même map pour tous les joueurs).
 **Saut** (on peut monter sur les caisses), tir hitscan avec headshot.
 
+- **Spike (pose / désamorçage)** en solo : les attaquants arment la Spike sur un site (**maintien [E]**, ~3,2 s) ; mèche de
+  **40 s** → si elle explose, les attaquants gagnent la manche ; les défenseurs peuvent **désamorcer** (~6,5 s, palier 50 %).
+  Après la pose, tuer tous les attaquants ne suffit plus : il faut désamorcer avant l'explosion. HUD dédié (barre de pose /
+  désamorçage, minuteur de Spike qui accélère). Les bots jouent l'objectif (attaquants convergent et arment, défenseurs retake).
 - **HUD du haut type Valorant** : portraits des deux équipes (PV + vivants/morts), scores, et **timer de manche de 2:00**
-  au centre (si le temps s'écoule, la défense gagne la manche).
+  au centre (si le temps s'écoule **avant la pose**, la défense gagne la manche).
 - **Sprites directionnels** : on voit l'orientation réelle des avatars (face / dos / profil selon leur déplacement et leur
   visée) au lieu qu'ils fixent tous le joueur.
-- **IA compétitive** : visée crédible (précision selon distance / mouvement / temps de visée / skill), usage des couvertures,
-  repli pour recharger, rôles (défenseurs qui tiennent les sites, attaquants qui poussent), **évitement des murs** (ils ne
-  se coincent plus).
+- **IA compétitive** : visée crédible (précision selon distance / mouvement / temps de visée / skill), temps de réaction
+  réaliste (ré-acquisition plus rapide s'ils sont déjà en alerte), usage des couvertures, repli pour recharger, rôles
+  (défenseurs qui tiennent les sites, attaquants qui poussent), **évitement des murs** (ils ne se coincent plus).
+  **3 niveaux de difficulté** (Facile / Normal / Difficile) réglant réaction, précision et headshots — Difficile est
+  volontairement punitif. Map retravaillée avec **plus de couverture** (sorties de spawn + chicanes de lane) pour casser
+  les longues lignes de tir au sniper.
 - **Mort → spectateur** : à l'élimination, la caméra suit un coéquipier vivant (clic = joueur suivant).
 - **Ambiance soirée** : ciel crépusculaire avec coucher de soleil à l'horizon, lanternes chaudes (fixées aux murs).
 - **IA « comme un vrai joueur »** : jiggle-**peek** depuis les couvertures, **counter-strafe** (s'arrête net pour tirer, donc

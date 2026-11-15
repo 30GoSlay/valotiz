@@ -86,17 +86,37 @@
   @keyframes sload { to { width: 100%; } }
   .splash.hide { opacity: 0; pointer-events: none; }
   /* ---- menu paramètres (Échap) ---- */
-  .settings { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(6,10,20,.82); backdrop-filter: blur(6px); }
+  .settings { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(6,10,20,.78); backdrop-filter: blur(7px); font-family: "Oswald","Arial Narrow",system-ui,sans-serif; }
   .settings[hidden] { display: none; }
-  .set-card { width: min(540px, 92vw); background: rgba(10,16,30,.92); border: 1px solid rgba(120,200,255,.2); border-radius: 16px; padding: 26px 28px; box-shadow: 0 18px 50px rgba(0,0,0,.5); }
-  .set-card h2 { text-align: center; letter-spacing: 3px; margin-bottom: 20px; font-size: 22px; color: #bff0f6; }
-  .set-row { display: grid; grid-template-columns: 160px 1fr 54px; align-items: center; gap: 12px; margin: 13px 0; font-weight: 700; font-size: 14px; }
-  .set-row.toggle { grid-template-columns: 160px auto; }
-  .set-row input[type=range] { width: 100%; accent-color: #4fd3e6; }
-  .set-row input[type=checkbox] { width: 20px; height: 20px; accent-color: #4fd3e6; }
-  .set-val { text-align: right; font-variant-numeric: tabular-nums; opacity: .8; color: #9fe6f0; }
-  .set-btns { display: flex; gap: 12px; margin-top: 22px; }
-  .set-hint { text-align: center; font-size: 11px; opacity: .45; margin-top: 12px; }
+  .set-card { width: min(560px,94vw); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, rgba(16,24,36,.97), rgba(9,14,22,.98)); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 0 60px rgba(73,227,234,.04); }
+  .set-head { display: flex; align-items: center; gap: 12px; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,.08); position: relative; }
+  .set-head::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 130px; height: 2px; background: linear-gradient(90deg,#ff415a,#49e3ea); }
+  .set-v { width: 28px; height: 28px; display: grid; place-items: center; font-weight: 900; font-size: 16px; color: #0a1016; background: linear-gradient(160deg,#eafcff,#49e3ea); clip-path: polygon(0 0,100% 0,50% 100%); }
+  .set-head h2 { font-size: 20px; letter-spacing: 4px; font-weight: 800; color: #fff; flex: 1; }
+  .set-x { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.05); color: #cfe0ee; font-size: 14px; cursor: pointer; }
+  .set-x:hover { border-color: #ff415a; color: #fff; }
+  .set-body { padding: 6px 22px 8px; overflow: auto; }
+  .set-sec { font-size: 11px; letter-spacing: 3px; color: #7fd8e2; margin: 16px 0 4px; padding-bottom: 5px; border-bottom: 1px solid rgba(73,227,234,.16); text-transform: uppercase; }
+  .set-row { display: grid; grid-template-columns: 1fr 180px 46px; align-items: center; gap: 14px; margin: 11px 0; font-weight: 600; font-size: 14px; color: #dbe6f0; }
+  .set-row.toggle { grid-template-columns: 1fr auto; }
+  .set-val { text-align: right; font-variant-numeric: tabular-nums; color: #4fd3e6; font-weight: 700; }
+  .set-row input[type=range] { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 4px; background: linear-gradient(90deg,#49e3ea33,#2a3a4a); outline: none; }
+  .set-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(160deg,#eafcff,#3bf0d8); box-shadow: 0 0 10px rgba(60,240,216,.6); cursor: pointer; border: 0; }
+  .set-row input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #3bf0d8; border: 0; cursor: pointer; }
+  .sw { position: relative; display: inline-block; width: 46px; height: 24px; cursor: pointer; }
+  .sw input { display: none; }
+  .sw span { position: absolute; inset: 0; background: rgba(255,255,255,.12); border-radius: 20px; transition: .15s; }
+  .sw span::before { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #cfe0ee; transition: .15s; }
+  .sw input:checked + span { background: linear-gradient(90deg,#10b39f,#3bf0d8); }
+  .sw input:checked + span::before { transform: translateX(22px); background: #07140f; }
+  .set-diff { display: flex; gap: 6px; justify-content: flex-end; }
+  .set-diff .diffb { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); color: #cfe0ee; border-radius: 7px; padding: 7px 14px; cursor: pointer; font-weight: 700; font-size: 13px; }
+  .set-btns { display: flex; gap: 10px; padding: 14px 22px; border-top: 1px solid rgba(255,255,255,.08); }
+  .set-resume { flex: 1; border: 0; cursor: pointer; color: #07140f; background: linear-gradient(180deg,#3bf0d8,#10b39f); clip-path: polygon(2% 0,100% 0,98% 100%,0 100%); padding: 12px; font: 800 16px/1 "Oswald","Arial Narrow",sans-serif; letter-spacing: 3px; }
+  .set-resume:hover { filter: brightness(1.08); }
+  .set-quit { border: 1px solid rgba(255,100,118,.4); background: rgba(255,100,118,.08); color: #ff9aa6; border-radius: 6px; padding: 12px 18px; cursor: pointer; font-weight: 700; letter-spacing: 1px; font-family: inherit; }
+  .set-quit:hover { border-color: #ff6476; color: #fff; }
+  .set-hint { text-align: center; font-size: 11px; opacity: .4; padding: 2px 0 12px; }
   .card { text-align: center; max-width: 480px; padding: 30px 26px; }
   .card h1 { font-size: 32px; letter-spacing: 1px; margin-bottom: 6px; } .card h1 span { color: #6fd0ff; }
   .card p { opacity: .86; line-height: 1.5; margin-bottom: 10px; font-size: 15px; }
@@ -170,6 +190,19 @@
   .killbadge img { width: 150px; height: 150px; filter: drop-shadow(0 0 16px rgba(60,240,170,.6)); }
   .killbadge.pop { animation: badgePop .5s cubic-bezier(.2,1.4,.4,1); }
   @keyframes badgePop { 0% { transform: translateX(-50%) scale(.3); opacity: 0; } 55% { transform: translateX(-50%) scale(1.12); opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+  /* ===== objectif Spike ===== */
+  .objwrap { position: absolute; left: 50%; bottom: 27%; transform: translateX(-50%); width: 280px; text-align: center; z-index: 44; }
+  .objwrap[hidden] { display: none; }
+  .objtxt { font-weight: 800; letter-spacing: 1px; font-size: 15px; text-shadow: 0 2px 6px #000; margin-bottom: 6px; }
+  .objbar { height: 7px; background: rgba(255,255,255,.16); border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,.45); }
+  .objbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#ffd24a,#ff8a3c); }
+  .objwrap.defuse .objbar i { background: linear-gradient(90deg,#4fd3e6,#3ba0e6); }
+  .spikehud { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: rgba(60,10,14,.82); border: 1px solid rgba(255,80,80,.5); border-radius: 8px; padding: 5px 14px; font-weight: 800; letter-spacing: 1px; font-size: 15px; z-index: 6; }
+  .spikehud[hidden] { display: none; }
+  .spikehud b { color: #ff6a6a; font-variant-numeric: tabular-nums; min-width: 20px; text-align: center; }
+  .spikehud .sp-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 8px #ff3b3b; animation: spblink 1s infinite; }
+  @keyframes spblink { 50% { opacity: .25; } }
+  .spikehud.hot { animation: sphot .4s steps(1) infinite; } @keyframes sphot { 50% { background: rgba(130,22,26,.96); border-color: #ff6a6a; } }
   /* ===== bannières style Valorant ===== */
   #vb { position: absolute; left: 50%; top: 24%; transform: translate(-50%,-50%); z-index: 46; pointer-events: none; text-align: center; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; }
   #vb[hidden] { display: none; }
@@ -196,6 +229,103 @@
   .vb-mvp { position: relative; display: inline-block; margin-top: 16px; padding: 10px 50px; font-size: 32px; font-weight: 700; letter-spacing: 3px; color: #fff; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; background: linear-gradient(180deg,#141c22,#0a1015); clip-path: polygon(12% 0,88% 0,100% 100%,0 100%); box-shadow: inset 0 0 0 2px rgba(255,255,255,.12); }
   .vb-mvp i { position: absolute; top: 0; bottom: 0; width: 34px; background: linear-gradient(180deg,#f3d79a,#c9a24e); }
   .vb-mvp i.l { left: -6px; clip-path: polygon(0 0,100% 0,60% 100%,0 100%); } .vb-mvp i.r { right: -6px; clip-path: polygon(40% 0,100% 0,100% 100%,0 100%); }
+  /* ===== launcher façon Valorant ===== */
+  #start { padding: 0; align-items: stretch; justify-content: stretch; }
+  .vl-bg { position: absolute; inset: 0; z-index: 0; background: url(menu-bg.jpg) center / cover no-repeat, #0a0f1a; }
+  .vl-bg::after { content: ""; position: absolute; inset: 0; background:
+    linear-gradient(180deg, rgba(6,10,20,.94) 0%, rgba(6,10,20,.6) 9%, rgba(6,10,20,.12) 24%, rgba(6,10,20,.08) 52%, rgba(6,10,20,.55) 82%, rgba(6,10,20,.9) 100%),
+    radial-gradient(130% 90% at 50% 46%, transparent 52%, rgba(4,7,14,.62)); }
+  .vl-loading { position: relative; z-index: 2; margin: auto; text-align: center; }
+  .vl-loading small { display: block; font-size: 14px; font-weight: 500; opacity: .7; margin-top: 8px; letter-spacing: 1px; }
+  .vl-launcher { position: relative; z-index: 2; width: 100%; height: 100%; display: flex; flex-direction: column; font-family: "Oswald","Arial Narrow",system-ui,sans-serif; }
+  /* barre du haut */
+  .vl-top { display: flex; align-items: center; gap: 18px; padding: 14px 22px; }
+  .vl-logo { display: flex; align-items: center; gap: 10px; }
+  .vl-v { width: 34px; height: 34px; display: grid; place-items: center; font-weight: 900; font-size: 22px; color: #0a1016;
+    background: linear-gradient(160deg,#eafcff,#49e3ea); clip-path: polygon(0 0,100% 0,50% 100%); box-shadow: 0 0 18px rgba(60,230,235,.6); }
+  .vl-logo-t b { display: block; font-size: 17px; font-weight: 800; letter-spacing: 3px; }
+  .vl-logo-t small { font-size: 10px; letter-spacing: 2px; opacity: .55; text-transform: uppercase; }
+  .vl-nav { display: flex; gap: 4px; margin: 0 auto; }
+  .vl-tab { background: none; border: 0; color: #9fb2c4; font: 700 15px/1 "Oswald","Arial Narrow",sans-serif; letter-spacing: 2px; padding: 10px 16px; cursor: pointer; position: relative; border-radius: 6px; }
+  .vl-tab:hover { color: #e6f0fa; }
+  .vl-tab.on { color: #fff; }
+  .vl-tab.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 3px; background: linear-gradient(90deg,#ff415a,#49e3ea); border-radius: 3px; }
+  .vl-right { display: flex; align-items: center; gap: 12px; }
+  .vl-elo { font-weight: 700; letter-spacing: 1px; color: #bfe9ee; background: rgba(73,227,234,.1); border: 1px solid rgba(73,227,234,.25); padding: 6px 12px; border-radius: 20px; font-size: 13px; }
+  .vl-gear { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(255,255,255,.05); color: #cfe0ee; font-size: 18px; cursor: pointer; }
+  .vl-gear:hover { border-color: #49e3ea; color: #fff; }
+  /* vues (onglets) */
+  .vl-view { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .vl-view.on { display: flex; }
+  /* PLAY : héros + carte joueur */
+  .vl-hero { flex: 1; display: grid; place-items: center; min-height: 0; }
+  .vl-card { width: 230px; max-width: 42vw; background: linear-gradient(180deg, rgba(255,65,90,.14), rgba(10,18,28,.55)); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 12px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.45), inset 0 0 40px rgba(255,65,90,.08); backdrop-filter: blur(3px); }
+  .vl-avatar { aspect-ratio: 3/4; border-radius: 9px; overflow: hidden; background: #0a1420 repeating-linear-gradient(120deg, rgba(255,65,90,.18) 0 10px, transparent 10px 22px); display: grid; place-items: end center; }
+  .vl-avatar img { width: 108%; image-rendering: pixelated; filter: drop-shadow(0 8px 18px rgba(0,0,0,.6)); }
+  .vl-namebar { margin-top: 10px; background: linear-gradient(90deg,#f3c53a,#f0a92a); clip-path: polygon(0 0,100% 0,94% 100%,6% 100%); }
+  .vl-namebar input { width: 100%; background: none; border: 0; text-align: center; color: #1a1205; font: 800 17px/1 "Oswald","Arial Narrow",sans-serif; letter-spacing: 2px; text-transform: uppercase; padding: 8px 6px; }
+  .vl-namebar input::placeholder { color: rgba(26,18,5,.5); }
+  .vl-sub { margin-top: 8px; font-size: 12px; letter-spacing: 1px; color: #bcd0e0; opacity: .85; min-height: 14px; }
+  /* barre de modes en bas */
+  .vl-modebar { padding: 0 22px 18px; }
+  .vl-modes { display: flex; gap: 10px; justify-content: center; }
+  .vl-mode { flex: 0 1 230px; text-align: left; background: linear-gradient(180deg, rgba(18,28,40,.85), rgba(10,16,24,.9)); border: 1px solid rgba(255,255,255,.1); border-top: 3px solid rgba(255,255,255,.18); color: #cdddea; border-radius: 4px; padding: 12px 14px; cursor: pointer; transition: .12s; }
+  .vl-mode b { display: block; font-size: 15px; font-weight: 800; letter-spacing: 2px; color: #fff; }
+  .vl-mode span { font-size: 11px; letter-spacing: 1px; opacity: .65; }
+  .vl-mode:hover { border-color: rgba(73,227,234,.5); transform: translateY(-2px); }
+  .vl-mode.sel { border-top-color: #ff415a; background: linear-gradient(180deg, rgba(255,65,90,.22), rgba(10,16,24,.92)); box-shadow: 0 8px 26px -8px rgba(255,65,90,.5); }
+  .vl-playrow { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+  .vl-diff { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9fb2c4; letter-spacing: 1px; }
+  .vl-diff .diffb { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); color: #cfe0ee; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-weight: 700; font-size: 12px; }
+  .vl-roomcode { width: 150px; background: rgba(8,13,26,.6); border: 1px solid rgba(120,200,255,.25); color: #dce6f2; border-radius: 8px; padding: 9px 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .vl-play { min-width: 210px; border: 0; cursor: pointer; color: #07140f; background: linear-gradient(180deg,#3bf0d8,#10b39f); clip-path: polygon(3% 0,100% 0,97% 100%,0 100%); padding: 12px 30px; text-align: center; box-shadow: 0 10px 30px -6px rgba(40,224,200,.55); }
+  .vl-play b { display: block; font-size: 24px; font-weight: 900; letter-spacing: 4px; }
+  .vl-play small { display: block; font-size: 11px; letter-spacing: 2px; opacity: .7; text-transform: uppercase; }
+  .vl-play:hover { filter: brightness(1.08); }
+  /* panneaux (classement / maps / stats) */
+  .vl-pane { flex: 1; overflow: auto; margin: 0 auto; width: min(680px,92%); padding: 10px 0 20px; }
+  .vl-pane h2 { font-size: 22px; letter-spacing: 2px; margin-bottom: 12px; }
+  .vl-pane h3 { font-size: 14px; letter-spacing: 1px; opacity: .7; margin-bottom: 8px; }
+  .vl-dim { opacity: .6; }
+  .vl-btn { display: inline-block; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); color: #dce6f2; border-radius: 8px; padding: 10px 16px; cursor: pointer; text-decoration: none; font-weight: 700; letter-spacing: 1px; }
+  .vl-btn:hover { border-color: #49e3ea; }
+  .vl-customlist { display: flex; flex-direction: column; gap: 6px; }
+  .vl-customlist button { width: 100%; text-align: left; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); color: #e6f0fa; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
+  .vl-customlist button:hover { border-color: #ff415a; }
+  .vl-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 10px; }
+  .vl-stat { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 14px; text-align: center; }
+  .vl-stat b { display: block; font-size: 30px; font-weight: 800; color: #4fd3e6; }
+  .vl-stat span { font-size: 11px; letter-spacing: 1px; opacity: .65; text-transform: uppercase; }
+  /* coins */
+  .vl-corners { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 22px 16px; pointer-events: none; }
+  .vl-corner { background: rgba(10,16,24,.6); border: 1px solid rgba(255,255,255,.1); border-left: 3px solid #49e3ea; border-radius: 4px; padding: 8px 14px; max-width: 320px; }
+  .vl-corner.vl-social { border-left-color: #ff415a; text-align: right; }
+  .vl-corner b { display: block; font-size: 12px; letter-spacing: 2px; }
+  .vl-corner span { font-size: 11px; opacity: .6; }
+  /* page carrière */
+  .vl-career { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px 1fr; gap: 20px; width: min(960px,94%); margin: 6px auto 0; padding-bottom: 14px; }
+  .vl-rankcol { display: flex; flex-direction: column; align-items: center; background: rgba(10,16,24,.6); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 18px 14px; }
+  .vl-badge { width: 92px; height: 92px; display: grid; place-items: center; font-size: 46px; color: #0a1016; background: linear-gradient(160deg, var(--rc,#e8c24a), color-mix(in srgb, var(--rc,#e8c24a) 60%, #000)); clip-path: polygon(50% 0,100% 28%,100% 72%,50% 100%,0 72%,0 28%); box-shadow: 0 0 26px -4px var(--rc,#e8c24a); }
+  .vl-rankname { margin-top: 12px; font-size: 26px; font-weight: 800; letter-spacing: 3px; color: #fff; text-align: center; }
+  .vl-rating { width: 100%; margin-top: 10px; text-align: center; }
+  .vl-ratingbar { height: 8px; border-radius: 6px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .vl-ratingbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#3bf0d8,#10b39f); }
+  .vl-rating span { display: block; margin-top: 6px; font-size: 11px; letter-spacing: 1px; opacity: .65; }
+  .vl-statgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 16px; }
+  .vl-careermain { min-height: 0; display: flex; flex-direction: column; }
+  .vl-subtabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .vl-sub { background: none; border: 0; border-bottom: 2px solid transparent; color: #9fb2c4; font: 700 13px/1 "Oswald","Arial Narrow",sans-serif; letter-spacing: 2px; padding: 8px 12px; cursor: pointer; }
+  .vl-sub.on { color: #fff; border-bottom-color: #ff415a; }
+  .vl-subview { display: none; flex: 1; overflow: auto; }
+  .vl-subview.on { display: block; }
+  .vl-hrow { display: grid; grid-template-columns: 104px 1fr 86px; align-items: center; gap: 10px; border-radius: 8px; padding: 10px 12px; margin-bottom: 5px; border-left: 4px solid #888; background: rgba(255,255,255,.04); }
+  .vl-hrow.win { border-left-color: #3fd08a; background: linear-gradient(90deg, rgba(63,208,138,.14), rgba(255,255,255,.03)); }
+  .vl-hrow.lose { border-left-color: #ff6476; background: linear-gradient(90deg, rgba(255,100,118,.14), rgba(255,255,255,.03)); }
+  .vl-hrow .res { font-weight: 800; letter-spacing: 1px; font-size: 15px; }
+  .vl-hrow.win .res { color: #6fe0a8; } .vl-hrow.lose .res { color: #ff8a98; }
+  .vl-hrow .mid { font-size: 12px; opacity: .8; } .vl-hrow .mid b { color: #cfe0ee; }
+  .vl-hrow .sc { text-align: right; font-weight: 700; letter-spacing: 1px; }
+  @media (max-width: 760px) { .vl-nav { display: none; } .vl-modes { flex-wrap: wrap; } .vl-corners { display: none; } .vl-card { width: 180px; } .vl-career { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -225,8 +355,10 @@
   <div class="dmgind" id="dmgind"><div class="dmgarc"></div></div>
   <div class="scope" id="scope" hidden><div class="scope-ring"></div><i class="sl sh"></i><i class="sl sv"></i></div>
   <div class="killbadge" id="killbadge" hidden><img id="killbadgeImg" alt=""></div>
+  <div class="spikehud" id="spikehud" hidden><span class="sp-dot"></span>SPIKE <b id="spikeFuse">40</b></div>
+  <div class="objwrap" id="objwrap" hidden><div class="objtxt" id="objtxt"></div><div class="objbar"><i id="objbarfill"></i></div></div>
   <div id="vb" hidden></div>
-  <div class="hint">clic = tirer · <b>1-3 = armes</b> · clic droit = lunette (sniper) · R = recharger · <b>Tab = tableau</b> · ÉCHAP = souris</div>
+  <div class="hint">clic = tirer · <b>1-3 = armes</b> · clic droit = lunette · R = recharger · <b>E = poser la Spike</b> · Tab = tableau · ÉCHAP = souris</div>
   <div class="board" id="board" hidden>
     <div class="bd-head"><span class="bd-you" id="bdYou">0</span><span class="bd-sep">:</span><span class="bd-en" id="bdEn">0</span><span class="bd-rnd" id="bdRnd">Manche 1</span></div>
     <div class="bd-team att" id="bdAtt"></div>
@@ -234,31 +366,76 @@
   </div>
 </div>
 <div class="panel" id="start">
-  <div class="card">
-    <h1>VALO<span>TIZ</span></h1>
-    <p id="loading">Chargement des avatars…</p>
-    <div id="startBody" hidden>
-      <p>FPS tactique à la Valorant. <b>Deux maps</b> qui alternent (Pearl / Haven) + tes maps perso. Élimine l'équipe adverse ; premier à <b>5 manches</b>. Règle la <b>difficulté des bots</b> dans les paramètres (Échap).</p>
-      <div class="keys"><span class="key">WASD — bouger</span><span class="key">Espace — sauter</span><span class="key">Souris — viser</span><span class="key">Clic — tirer</span><span class="key">1/2/3 — Operator / Pistolet / Vandale</span><span class="key">Clic droit — lunette (bascule)</span><span class="key">R — recharger</span><span class="key">Maj — marcher</span><span class="key">Tab — tableau</span></div>
-      <p style="margin-top:10px;font-weight:700">Choisis ton format :</p>
-      <div class="modes"><button class="mode" data-n="2">2<b>v</b>2</button><button class="mode" data-n="5">5<b>v</b>5</button></div>
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-        <span style="opacity:.7;font-size:13px;white-space:nowrap">Pseudo</span>
-        <input id="pseudo" maxlength="14" placeholder="Ton pseudo (online)" style="flex:1;background:rgba(8,13,26,.6);border:1px solid rgba(120,200,255,.25);color:#dce6f2;border-radius:8px;padding:8px 10px;font-weight:600">
+  <div class="vl-bg"></div>
+  <h1 id="loading" class="vl-loading">VALO<span>TIZ</span><small>Chargement des avatars…</small></h1>
+  <div id="startBody" hidden class="vl-launcher">
+    <header class="vl-top">
+      <div class="vl-logo"><span class="vl-v">V</span><div class="vl-logo-t"><b>VALOTIZ</b><small id="vlVer">épisode 1 · tactique</small></div></div>
+      <nav class="vl-nav">
+        <button class="vl-tab on" data-tab="play">JOUER</button>
+        <button class="vl-tab" data-tab="career">CARRIÈRE</button>
+        <button class="vl-tab" data-tab="maps">MAPS</button>
+      </nav>
+      <div class="vl-right"><span class="vl-elo" id="vlElo">ELO —</span><button class="vl-gear" id="vlGear" title="Paramètres">⚙</button></div>
+    </header>
+
+    <section class="vl-view on" data-view="play">
+      <div class="vl-hero">
+        <div class="vl-card">
+          <div class="vl-avatar"><img id="vlAv" alt=""></div>
+          <div class="vl-namebar"><input id="pseudo" maxlength="14" placeholder="TON PSEUDO"></div>
+          <div class="vl-sub" id="eloLabel">Choisis un pseudo</div>
+        </div>
       </div>
-      <button class="btn-online" id="btnOnline" style="margin-top:8px">5v5 EN LIGNE <small>— rechercher une partie</small></button>
-      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-        <input id="roomCode" maxlength="12" placeholder="Code de salon (optionnel)" style="flex:1;background:rgba(8,13,26,.6);border:1px solid rgba(120,200,255,.25);color:#dce6f2;border-radius:8px;padding:8px 10px;font-weight:600;text-transform:uppercase">
-        <button class="btn-online" id="btnLeaderboard" style="flex:0 0 auto;padding:8px 14px">🏆 Classement</button>
+      <div class="vl-modebar">
+        <div class="vl-modes">
+          <button class="vl-mode mode on" data-mode="m5" data-n="5"><b>ENTRAÎNEMENT</b><span>5v5 · ~8 min</span></button>
+          <button class="vl-mode mode" data-mode="m2" data-n="2"><b>DUEL</b><span>2v2 · ~5 min</span></button>
+          <button class="vl-mode" data-mode="online"><b>COMPÉTITIF</b><span>5v5 en ligne · ELO</span></button>
+          <button class="vl-mode" data-mode="custom"><b>PARTIE PERSO</b><span>tes maps</span></button>
+        </div>
+        <div class="vl-playrow">
+          <div class="vl-diff" id="vlDiffRow"><span>Difficulté</span><button class="diffb" data-d="facile">Facile</button><button class="diffb" data-d="normal">Normal</button><button class="diffb" data-d="difficile">Difficile</button></div>
+          <input id="roomCode" maxlength="12" placeholder="CODE SALON" class="vl-roomcode" hidden>
+          <button class="vl-play" id="vlPlay"><b>JOUER</b><small id="vlPlaySub">Entraînement 5v5</small></button>
+        </div>
       </div>
-      <div id="eloLabel" style="font-size:12px;opacity:.78;margin-top:6px;text-align:center"></div>
-      <div id="editorRow" style="display:flex;gap:8px;margin-top:10px">
-        <a class="btn-online" href="editor.html" style="flex:1;text-align:center;text-decoration:none">🛠 Éditeur de map</a>
-        <button class="btn-online" id="btnCustom" style="flex:1">🗺 Mes maps</button>
+    </section>
+
+    <section class="vl-view" data-view="career">
+      <div class="vl-career">
+        <aside class="vl-rankcol">
+          <div class="vl-badge" id="vlBadge">◆</div>
+          <div class="vl-rankname" id="vlRankName">NON CLASSÉ</div>
+          <div class="vl-rating"><div class="vl-ratingbar"><i id="vlRatingFill"></i></div><span id="vlRatingTxt">Joue en ligne pour être classé</span></div>
+          <div class="vl-statgrid" id="vlStats"></div>
+        </aside>
+        <div class="vl-careermain">
+          <div class="vl-subtabs">
+            <button class="vl-sub on" data-sub="hist">HISTORIQUE</button>
+            <button class="vl-sub" data-sub="rank">CLASSEMENT</button>
+          </div>
+          <div class="vl-subview on" data-subview="hist" id="vlHist"></div>
+          <div class="vl-subview" data-subview="rank" id="lbRowsTab"></div>
+        </div>
       </div>
-      <div id="custList" hidden style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:170px;overflow:auto"></div>
-      <input type="file" id="custFile" accept="application/json" hidden>
-    </div>
+    </section>
+
+    <section class="vl-view" data-view="maps">
+      <div class="vl-pane">
+        <h2>Maps</h2>
+        <div id="editorRow" class="vl-maprow"><a class="vl-btn" href="editor.html">🛠 Ouvrir l'éditeur de map</a></div>
+        <h3 style="margin-top:14px">Mes maps perso</h3>
+        <div id="custList" class="vl-customlist"></div>
+        <input type="file" id="custFile" accept="application/json" hidden>
+        <button id="btnCustom" hidden></button>
+      </div>
+    </section>
+
+    <footer class="vl-corners">
+      <div class="vl-corner"><b>NOUVEAUTÉS</b><span id="vlNews">Menu façon Valorant · ELO &amp; classement · éditeur de map</span></div>
+      <div class="vl-corner vl-social"><b>SOCIAL</b><span>Entre amis : partagez un <b>code de salon</b></span></div>
+    </footer>
   </div>
 </div>
 <div class="panel" id="lobby" hidden>
@@ -274,13 +451,6 @@
     <div class="modes"><button class="btn" id="lobbyStart">DÉMARRER MAINTENANT</button><button class="btn ghost" id="lobbyCancel">Annuler</button></div>
   </div>
 </div>
-<div class="panel" id="lbPanel" hidden>
-  <div class="card" style="max-width:540px;width:92%">
-    <h1>🏆 CLASSEMENT <span>ELO</span></h1>
-    <div id="lbRows" style="margin-top:8px"></div>
-    <button class="btn" id="lbClose" style="margin-top:14px">Fermer</button>
-  </div>
-</div>
 <div class="panel" id="over" hidden>
   <div class="card" id="overCard">
     <h1 id="overTitle"><span>—</span></h1>
@@ -290,15 +460,21 @@
 </div>
 <div class="settings" id="settings" hidden>
   <div class="set-card">
-    <h2>PARAMÈTRES</h2>
-    <div class="set-row"><label>Volume</label><input type="range" id="setVol" min="0" max="1" step="0.05"><span class="set-val" id="setVolV"></span></div>
-    <div class="set-row"><label>Sensibilité X</label><input type="range" id="setSx" min="0.2" max="3" step="0.05"><span class="set-val" id="setSxV"></span></div>
-    <div class="set-row"><label>Sensibilité Y</label><input type="range" id="setSy" min="0.2" max="3" step="0.05"><span class="set-val" id="setSyV"></span></div>
-    <div class="set-row"><label>Sensibilité lunette</label><input type="range" id="setAds" min="0.2" max="2" step="0.05"><span class="set-val" id="setAdsV"></span></div>
-    <div class="set-row"><label>Champ de vision</label><input type="range" id="setFov" min="60" max="103" step="1"><span class="set-val" id="setFovV"></span></div>
-    <div class="set-row"><label>Difficulté des bots</label><span id="setDiff" style="display:flex;gap:6px;flex:1;justify-content:flex-end"><button class="btn ghost diffb" data-d="facile">Facile</button><button class="btn ghost diffb" data-d="normal">Normal</button><button class="btn ghost diffb" data-d="difficile">Difficile</button></span></div>
-    <div class="set-row toggle"><label>Inverser l'axe Y</label><input type="checkbox" id="setInv"></div>
-    <div class="set-btns"><button class="btn" id="setResume">REPRENDRE</button><button class="btn ghost" id="setMenu">Quitter au menu</button></div>
+    <div class="set-head"><span class="set-v">V</span><h2>PARAMÈTRES</h2><button class="set-x" id="setClose">✕</button></div>
+    <div class="set-body">
+      <div class="set-sec">Audio</div>
+      <div class="set-row"><label>Volume général</label><input type="range" id="setVol" min="0" max="1" step="0.05"><span class="set-val" id="setVolV"></span></div>
+      <div class="set-sec">Souris &amp; visée</div>
+      <div class="set-row"><label>Sensibilité horizontale</label><input type="range" id="setSx" min="0.2" max="3" step="0.05"><span class="set-val" id="setSxV"></span></div>
+      <div class="set-row"><label>Sensibilité verticale</label><input type="range" id="setSy" min="0.2" max="3" step="0.05"><span class="set-val" id="setSyV"></span></div>
+      <div class="set-row"><label>Sensibilité en lunette</label><input type="range" id="setAds" min="0.2" max="2" step="0.05"><span class="set-val" id="setAdsV"></span></div>
+      <div class="set-row toggle"><label>Inverser l'axe Y</label><label class="sw"><input type="checkbox" id="setInv"><span></span></label></div>
+      <div class="set-sec">Affichage</div>
+      <div class="set-row"><label>Champ de vision (FOV)</label><input type="range" id="setFov" min="60" max="103" step="1"><span class="set-val" id="setFovV"></span></div>
+      <div class="set-sec">Jeu</div>
+      <div class="set-row toggle"><label>Difficulté des bots</label><span id="setDiff" class="set-diff"><button class="diffb" data-d="facile">Facile</button><button class="diffb" data-d="normal">Normal</button><button class="diffb" data-d="difficile">Difficile</button></span></div>
+    </div>
+    <div class="set-btns"><button class="set-resume" id="setResume">REPRENDRE</button><button class="set-quit" id="setMenu">Quitter au menu</button></div>
     <div class="set-hint">Échap pour ouvrir / fermer</div>
   </div>
 </div>
@@ -308,6 +484,7 @@
 "use strict";
 import * as THREE from "three";
 import { GLTFLoader } from "./GLTFLoader.js";
+import { SCIFI_KIT } from "./scifikit.js";
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -335,6 +512,11 @@ const Snd = (() => {
     sniperShot: () => play("sniper", 0.6),
     pistolShot: () => play("shoot", 0.5, 1.32),   // même tir, plus aigu/claquant
     knife() { const c = ac(), o = c.createOscillator(), g = c.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(760, c.currentTime); o.frequency.exponentialRampToValueAtTime(170, c.currentTime + 0.12); g.gain.setValueAtTime(0.2, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.14); o.connect(g).connect(mg()); o.start(); o.stop(c.currentTime + 0.16); },  // « whoosh » synthé
+    // ---- spike (synthétisé) ----
+    spikePlant() { tick(440, 0.08, 0.18); setTimeout(() => tick(620, 0.12, 0.2), 90); },
+    spikeBeep(hot) { tick(hot ? 1500 : 1050, 0.05, 0.14); },
+    defused() { tick(880, 0.1, 0.2); setTimeout(() => tick(590, 0.14, 0.2), 110); setTimeout(() => tick(400, 0.18, 0.18), 240); },
+    spikeBoom() { const c = ac(), n = (c.sampleRate * 0.9) | 0, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2); const s = c.createBufferSource(); s.buffer = b; const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 340; const g = c.createGain(); g.gain.value = 0.55; s.connect(f).connect(g).connect(mg()); s.start(); },
     step, reload: () => play("reload", 0.6), sniperReload: () => play("sniperreload", 0.6),
     death: () => play("kill", 0.55),
     aceDing: () => play("killace", 0.85),   // « ding » ACE seul, sans la voix (dernier kill gagnant)
@@ -459,6 +641,18 @@ function buildBlockout() {
   addBox(16, 54, 3, 3, 1.3, crateMat); addBox(-16, 54, 3, 3, 1.3, crateMat); addBox(16, -54, 3, 3, 1.3, crateMat); addBox(-16, -54, 3, 3, 1.3, crateMat);
   addBox(30, 14, 3, 3, 1.3, crateMat); addBox(-30, 14, 3, 3, 1.3, crateMat); addBox(30, -14, 3, 3, 1.3, crateMat); addBox(-30, -14, 3, 3, 1.3, crateMat);
   addBox(0, 30, 4, 2.4, 1.3, crateMat); addBox(0, -30, 4, 2.4, 1.3, crateMat);
+  // --- COUVERTURE ANTI-SNIPER : casse les longues lignes de tir spawn↔spawn ---
+  // sorties de spawn (deux côtés) : muret haut au centre + caisses décalées → on n'est plus exposé dès le spawn
+  for (const sz of [40, -40]) {
+    addBox(0, sz, 10, 1.8, 2.8);                                   // muret central devant chaque spawn
+    addBox(23, sz, 3, 2, 2.8); addBox(-23, sz, 3, 2, 2.8);          // murets latéraux
+    addBox(11, sz + (sz > 0 ? -4 : 4), 2.6, 2.6, 1.3, crateMat); addBox(-11, sz + (sz > 0 ? -4 : 4), 2.6, 2.6, 1.3, crateMat);
+  }
+  // chicanes décalées le long des lanes latérales (x≈±30) : alternance gauche/droite pour couper la ligne
+  addBox(31, 24, 3.2, 2, 2.8); addBox(28, -2, 2.8, 2.8, 1.3, crateMat); addBox(31, -24, 3.2, 2, 2.8);
+  addBox(-31, 24, 3.2, 2, 2.8); addBox(-28, -2, 2.8, 2.8, 1.3, crateMat); addBox(-31, -24, 3.2, 2, 2.8);
+  // couverture de rotation autour du bâtiment central (pour avancer vers les sites à couvert)
+  addBox(9, 17, 3, 2.2, 2.6); addBox(-9, 17, 3, 2.2, 2.6); addBox(9, -17, 3, 2.2, 2.6); addBox(-9, -17, 3, 2.2, 2.6);
 }
 // --- déco du thème PEARL (froid, aquatique) ---
 function pearlProps() {
@@ -511,13 +705,90 @@ function paintFloor(fill, line) {
   g.fillStyle = "rgba(255,255,255,.05)"; g.fillRect(0, 0, 64, 64); g.fillRect(64, 64, 64, 64);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(MAPX, MAPZ); matFloor.map = t; matFloor.needsUpdate = true;
 }
-// --- thèmes ---
+// ===== kit sci-fi modulaire (Quaternius, CC0) : re-skin « Station » des maps =====
+const KIT = { ready: false };
+const scifiLoader = new GLTFLoader();
+let kitReadyCb = null;
+(function loadKit() {
+  const keys = Object.keys(SCIFI_KIT);
+  let pending = keys.length;
+  const done = () => { if (--pending === 0) { KIT.ready = true; if (kitReadyCb) kitReadyCb(); } };
+  for (const k of keys) {
+    const bin = Uint8Array.from(atob(SCIFI_KIT[k]), (c) => c.charCodeAt(0)).buffer;   // base64 → ArrayBuffer
+    scifiLoader.parse(bin, "", (g) => { KIT[k] = g.scene; done(); }, () => done());
+  }
+})();
+// construit des InstancedMesh pour une pièce du kit (perf : quelques draw calls pour des centaines de panneaux)
+function instanceKit(root, matrices, accentHex) {
+  if (!root || !matrices.length) return;
+  const subs = []; root.updateMatrixWorld(true);
+  root.traverse((o) => { if (o.isMesh) { o.updateWorldMatrix(true, false); subs.push({ geo: o.geometry, mat: o.material, local: o.matrixWorld.clone() }); } });
+  const tmp = new THREE.Matrix4();
+  for (const s of subs) {
+    let mat = s.mat.clone(); mat.side = THREE.DoubleSide;   // double face : jamais de panneau invisible selon l'angle
+    if (accentHex && s.mat.name && /accent|emis|light|glow/i.test(s.mat.name)) { mat.color.setHex(accentHex); mat.emissive = new THREE.Color(accentHex); if ("emissiveIntensity" in mat) mat.emissiveIntensity = 0.9; }
+    const im = new THREE.InstancedMesh(s.geo, mat, matrices.length);
+    im.castShadow = true; im.receiveShadow = true;
+    for (let i = 0; i < matrices.length; i++) { tmp.multiplyMatrices(matrices[i], s.local); im.setMatrixAt(i, tmp); }
+    im.instanceMatrix.needsUpdate = true; track(im);
+  }
+}
+const PANEL_W = 4, PANEL_H = 4.43;   // dimensions mesurées du panneau mural
+const kM = (px, py, pz, ry, sx, sy, sz) => new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0)), new THREE.Vector3(sx, sy, sz || sx));
+// tile une rangée de panneaux muraux le long d'un axe, sur un plan donné
+function tileRow(out, alongX, lineConst, start, end, h, faceOffset) {
+  const len = end - start; if (len < 0.3) return;
+  const n = Math.max(1, Math.round(len / (PANEL_W * (h / PANEL_H))));
+  const step = len / n, sx = step / PANEL_W, sy = h / PANEL_H, ry = alongX ? 0 : Math.PI / 2;
+  for (let i = 0; i < n; i++) {
+    const t = start + (i + 0.5) * step;
+    const px = alongX ? t : lineConst + faceOffset, pz = alongX ? lineConst + faceOffset : t;
+    out.push(kM(px, 0, pz, ry, sx, sy, 1));
+  }
+}
+function stationSkin(th) {
+  if (!KIT.ready) { kitReadyCb = () => { if (currentMap === th.key) stationSkin(th); }; return; }
+  const accent = th.accentHex, walls = [], cols = [], vents = [];
+  for (const w of WALLS) {
+    if (w.h < 4) continue;                                    // caisses (≤1.3) ignorées : elles gardent la texture sci-fi
+    const lenX = w.x1 - w.x0, lenZ = w.z1 - w.z0;
+    if (Math.min(lenX, lenZ) > 3.2) {                         // volume plein (bâtiment central) → habiller les 4 faces
+      tileRow(walls, true, w.z0, w.x0, w.x1, w.h, -0.05); tileRow(walls, true, w.z1, w.x0, w.x1, w.h, 0.05);
+      tileRow(walls, false, w.x0, w.z0, w.z1, w.h, -0.05); tileRow(walls, false, w.x1, w.z0, w.z1, w.h, 0.05);
+    } else {                                                  // mur fin → une rangée sur l'axe long
+      if (lenX >= lenZ) tileRow(walls, true, (w.z0 + w.z1) / 2, w.x0, w.x1, w.h, 0);
+      else tileRow(walls, false, (w.x0 + w.x1) / 2, w.z0, w.z1, w.h, 0);
+    }
+  }
+  // colonnes : coins du bâtiment central + angles de l'arène
+  for (const [x, z] of [[10, 15], [-10, 15], [10, -15], [-10, -15], [MAPX - 1, MAPZ - 1], [-MAPX + 1, MAPZ - 1], [MAPX - 1, -MAPZ + 1], [-MAPX + 1, -MAPZ + 1]]) cols.push(kM(x, 0, z, 0, 1.1, 1.12, 1.1));
+  // évents sur les parois des lanes (détails)
+  for (const [x, z, ry] of [[33.4, 4, Math.PI / 2], [-33.4, 4, Math.PI / 2], [9.6, 8, 0], [-9.6, 8, 0], [9.6, -8, 0], [-9.6, -8, 0]]) vents.push(kM(x, 2.6, z, ry, 1.3, 1.3, 1.3));
+  instanceKit(KIT.wall, walls, accent);
+  instanceKit(KIT.column, cols, accent);
+  instanceKit(KIT.vent, vents, accent);
+  // lumières d'accent néon (peu nombreuses — perf)
+  for (const [x, z] of [[26, -4], [-26, -4], [0, 22], [0, -22], [0, 0]]) { const pl = track(new THREE.PointLight(accent, 0.75, 28, 2)); pl.position.set(x, 3.4, z); }
+}
+// dôme sci-fi sombre (intérieur de station)
+function stationDome(top, horizon) {
+  return function () {
+    const c = document.createElement("canvas"); c.width = 1024; c.height = 512; const g = c.getContext("2d");
+    const grd = g.createLinearGradient(0, 0, 0, 512); grd.addColorStop(0, top); grd.addColorStop(0.6, "#0a0e14"); grd.addColorStop(1, horizon);
+    g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
+    for (let k = 0; k < 120; k++) { g.fillStyle = "rgba(180,210,230," + (0.1 + Math.random() * 0.4) + ")"; g.fillRect(Math.random() * 1024, Math.random() * 300, 1.5, 1.5); }
+    track(new THREE.Mesh(new THREE.SphereGeometry(170, 32, 20), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), side: THREE.BackSide, fog: false })));
+  };
+}
+// --- thèmes (STATION sci-fi : même structure que Pearl/Haven, skin modulaire) ---
 const THEMES = {
-  pearl: { name: "Pearl", bg: 0x4a8794, fog: [0x5f97a2, 80, 200], sun: [0xc3dbe2, 1.0, [26, 58, 14]], hemi: [0xa6cdd6, 0x6b7a84, 1.05], amb: [0x6d8894, 0.45],
-    floor: ["#98a4a8", "rgba(40,55,65,.26)"], wall: 0xc2ccce, trim: "#ffa83c", crateGlow: "#ffb24a", terra: 0x7e8c94, crate: 0x8793a0, wood: 0x6f7a84, pot: 0x8a9298, dome: pearlDome, props: pearlProps },
-  haven: { name: "Haven", bg: 0x9db4c4, fog: [0xc2c6ba, 95, 230], sun: [0xffe6c0, 1.5, [-34, 52, 30]], hemi: [0xd4e2ea, 0x8a7048, 0.9], amb: [0x8c8468, 0.42],
-    floor: ["#cdbf9e", "rgba(95,72,44,.24)"], wall: 0xe8dfc8, trim: "#b24a2e", crateGlow: "#3fe0c8", terra: 0x9c3f32, crate: 0xa67c42, wood: 0x7c5838, pot: 0xb09060, dome: havenDome, props: havenProps },
+  pearl: { name: "Station Alpha", key: "pearl", station: true, accentHex: 0x3fe0ea, bg: 0x0d151d, fog: [0x101b24, 95, 240], sun: [0xbfe0ec, 1.15, [20, 60, 16]], hemi: [0x7fa6b8, 0x242e38, 1.05], amb: [0x4a6570, 0.8],
+    floor: ["#182029", "rgba(63,224,234,.26)"], wall: 0x3a434e, trim: "#3fe0ea", crateGlow: "#3fe0ea", terra: 0x3a4049, crate: 0x3c4651, wood: 0x2a3038, pot: 0x3a4049, dome: stationDome("#103641", "#081a24"), props: null },
+  haven: { name: "Station Bravo", key: "haven", station: true, accentHex: 0xff9a3c, bg: 0x171009, fog: [0x1d130b, 95, 240], sun: [0xf2d2b0, 1.15, [-26, 58, 22]], hemi: [0xb08870, 0x2a221a, 1.05], amb: [0x5a483a, 0.8],
+    floor: ["#201810", "rgba(255,154,60,.24)"], wall: 0x443b30, trim: "#ff9a3c", crateGlow: "#ff9a3c", terra: 0x443a2e, crate: 0x463d32, wood: 0x322a22, pot: 0x443a2e, dome: stationDome("#3a2410", "#1a0f08"), props: null },
 };
+THEMES.pearl.props = () => stationSkin(THEMES.pearl);
+THEMES.haven.props = () => stationSkin(THEMES.haven);
 let currentMap = "pearl", currentMapName = "Pearl";
 let customMapData = null;   // map perso en cours (éditeur) ; null = map intégrée
 // ----- construction d'une map perso (depuis le JSON de l'éditeur) -----
@@ -561,6 +832,7 @@ function buildMap(key) {
   else { buildBlockout(); th.props(); }                      // map intégrée
 }
 buildMap("pearl");
+if (location.search.includes("dbg")) window.__dbg = { buildMap, get KIT() { return KIT; }, camera, renderer, scene, THREE };
 const SPAWN = { att: { x: 0, z: 56, yaw: 0 }, def: { x: 0, z: -56, yaw: Math.PI } };
 // couloirs d'avance (évitent le bâtiment central en x=0) : les bots poussent vers le camp adverse par ces x
 const LANES = [-30, -17, 17, 30];
@@ -691,9 +963,9 @@ let ads = false; // viseur (sniper) actif
 const SETTINGS = { vol: 0.9, sensX: 1, sensY: 1, ads: 1, fov: 78, invertY: false, diff: "normal" };
 // paliers de difficulté des bots : skill (visée), react (temps de réaction s), fire (cadence s/tir), hs (proba headshot), cap (précision max)
 const DIFF = {
-  facile:    { skill: [0.30, 0.55], react: [0.38, 0.68], fire: [0.20, 0.34], hs: 0.05, cap: 0.55 },
-  normal:    { skill: [0.48, 0.78], react: [0.26, 0.48], fire: [0.15, 0.26], hs: 0.09, cap: 0.70 },
-  difficile: { skill: [0.68, 0.96], react: [0.16, 0.32], fire: [0.11, 0.19], hs: 0.14, cap: 0.84 },
+  facile:    { skill: [0.34, 0.58], react: [0.32, 0.56], fire: [0.18, 0.30], hs: 0.06, cap: 0.62 },
+  normal:    { skill: [0.56, 0.86], react: [0.17, 0.33], fire: [0.12, 0.21], hs: 0.13, cap: 0.83 },
+  difficile: { skill: [0.80, 1.05], react: [0.10, 0.19], fire: [0.08, 0.14], hs: 0.22, cap: 0.94 },
 };
 const DF = () => DIFF[SETTINGS.diff] || DIFF.normal;
 try { const s = JSON.parse(localStorage.getItem("valotiz_settings") || "null"); if (s) Object.assign(SETTINGS, s); } catch {}
@@ -894,7 +1166,7 @@ function updateBot(e, dt) {
   const { o: foe, d } = nearestFoe(e);
   const los = foe ? hasLOS(e.x, e.z, foe.x, foe.z) : false;
   if (foe && los) {
-    if (e.seeT === 0) { e.react = rand(DF().react[0], DF().react[1]); e.burst = 0; } // temps de réaction (selon difficulté) + reset rafale
+    if (e.seeT === 0) { const recent = (e.searchT || 99) < 1.6; e.react = rand(DF().react[0], DF().react[1]) * (recent ? 0.45 : 1); e.burst = 0; } // réaction + ré-acquisition plus rapide si déjà en alerte
     e.seeT += dt; e.react -= dt; e.lastSeen = { x: foe.x, z: foe.z }; e.searchT = 0;
     e.aimAt = foe; e.faceAngle = Math.atan2(foe.x - e.x, foe.z - e.z); // pré-visée sur la cible
     const cov = nearestCover(e, foe);
@@ -914,12 +1186,12 @@ function updateBot(e, dt) {
     // tir : seulement quand on est exposé (peek) et bien plus précis à l'arrêt
     if (canShoot && (e.peeking || !cov)) {
       e.ammo = (e.ammo == null ? 25 : e.ammo) - 1; e.fireCD = rand(DF().fire[0], DF().fire[1]); e.burst = (e.burst || 0) + 1; Snd.shot(0.13 + 0.09 / (1 + d * 0.05));
-      const settle = e.seeT > 0.35 ? 1 : 0.42;                       // les premières balles (après avoir vu la cible) sont moins précises
-      const spray = Math.max(0.5, 1 - (e.burst - 1) * 0.08);          // précision qui baisse en rafale continue (comme un vrai spray)
-      let hit = e.skill * (1 - d / 240) * (e.moving ? 0.5 : 1) * settle * spray;
+      const settle = e.seeT > 0.22 ? 1 : 0.6;                        // les premières balles (après avoir vu la cible) un peu moins précises
+      const spray = Math.max(0.5, 1 - (e.burst - 1) * 0.07);          // précision qui baisse en rafale continue (comme un vrai spray)
+      let hit = e.skill * (1 - d / 260) * (e.moving ? 0.62 : 1) * settle * spray;
       hit = clamp(hit, 0.05, DF().cap);
       if (Math.random() < hit) {
-        const head = Math.random() < DF().hs * e.skill * (e.moving ? 0.5 : 1);  // headshot plus rare (selon difficulté)
+        const head = Math.random() < DF().hs * e.skill * (e.moving ? 0.6 : 1);  // headshot plus rare (selon difficulté)
         const dmg = head ? 150 : Math.round(rand(30, 44) * (d > 50 ? 0.85 : 1));
         if (foe.isPlayer) hurtPlayer(dmg, head, e);
         else if (online && foe.human) Net.relay({ k: "hit", target: foe.netid, dmg, head, by: e.name });  // bot hôte → humain distant
@@ -936,8 +1208,10 @@ function updateBot(e, dt) {
       e.goalT -= dt;
       if (!e.goal || e.goalT <= 0 || Math.hypot(e.goal.x - e.x, e.goal.z - e.z) < 2.5) {
         const pushPoint = () => { const lane = e.lane ?? LANES[(Math.random() * LANES.length) | 0]; const zside = e.team === "att" ? rand(-28, -4) : rand(4, 28); return { x: lane + rand(-4, 4), z: zside }; };
+        const obj = spikeObjective(e);   // objectif Spike : attaquants → site cible / spike ; défenseurs → spike à désamorcer
         // les « holders » patrouillent : la moitié du temps leur poste, sinon un point avancé → ils bougent
-        if (e.role === "hold" && e.post && Math.random() < 0.5) { e.goal = { x: e.post.x + rand(-3, 3), z: e.post.z + rand(-3, 3) }; e.goalT = rand(1.4, 2.8); }
+        if (obj) { e.goal = { x: obj.x + rand(-2.6, 2.6), z: obj.z + rand(-2.6, 2.6) }; e.goalT = rand(1.3, 2.6); }
+        else if (e.role === "hold" && e.post && Math.random() < 0.5) { e.goal = { x: e.post.x + rand(-3, 3), z: e.post.z + rand(-3, 3) }; e.goalT = rand(1.4, 2.8); }
         else { e.goal = pushPoint(); e.goalT = rand(2.0, 3.6); }
       }
       const atPost = e.role === "hold" && e.goal && Math.hypot(e.goal.x - e.x, e.goal.z - e.z) < 2.0;
@@ -983,6 +1257,81 @@ function hurtPlayer(dmg, head, attacker) {
   }
 }
 
+// ===================== SPIKE (pose / désamorçage) — solo =====================
+const SITES = [{ x: 26, z: -4, label: "A" }, { x: -26, z: -4, label: "B" }];
+const PLANT_R = 3.6, PLANT_TIME = 3.2, DEFUSE_TIME = 6.5, DEFUSE_HALF = 3.5, FUSE_TIME = 40;
+let spike = { state: "carried", site: null, target: null, fuse: 0, plantProg: 0, defuseProg: 0, mesh: null, _light: null, _onSite: null, _planting: false };
+let spikeBeepT = 0;
+function resetSpike() {
+  if (spike.mesh) { scene.remove(spike.mesh); spike.mesh = null; spike._light = null; }
+  spike.state = "carried"; spike.site = null; spike.fuse = 0; spike.plantProg = 0; spike.defuseProg = 0; spike._onSite = null; spike._planting = false;
+  spike.target = SITES[(Math.random() * SITES.length) | 0];   // site visé par les bots attaquants
+  spikeBeepT = 0;
+}
+function makeSpikeMesh(x, z) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.95, 0.5), new THREE.MeshStandardMaterial({ color: 0x15181d, emissive: 0x3a0000, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.4 }));
+  body.position.y = 0.48; g.add(body);
+  const prongs = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), new THREE.MeshStandardMaterial({ color: 0x8a1010 }));
+  prongs.position.y = 1.15; g.add(prongs);
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); light.position.y = 1.5; g.add(light);
+  g.position.set(x, 0, z); scene.add(g); spike._light = light; return g;
+}
+function siteClearForAtt(site, r) {   // aucun défenseur vivant trop près (le bot n'arme pas sous le feu immédiat)
+  for (const e of entities) if (e.alive && e.team === "en" && Math.hypot(e.x - site.x, e.z - site.z) < r) return false;
+  return true;
+}
+function plantSpike(site, by) {
+  spike.state = "planted"; spike.site = site; spike.fuse = FUSE_TIME; spike.plantProg = 0; spike.defuseProg = 0;
+  spike.mesh = makeSpikeMesh(site.x, site.z); spikeBeepT = 0;
+  Snd.spikePlant(); banner("SPIKE POSÉE", "Site " + site.label + " — défendez-la !", "good");
+}
+function spikeExplode() { if (spike.state !== "planted") return; spike.state = "exploded"; Snd.spikeBoom(); if (spike._light) spike._light.material.color.setHex(0xffcc44); endRound(true, "La Spike a explosé"); }
+function spikeDefused() { if (spike.state !== "planted") return; spike.state = "defused"; Snd.defused(); endRound(false, "Spike désamorcée"); }
+// tour de boucle de la spike (uniquement en solo, manche live)
+function spikeTick(dt) {
+  if (online) return;
+  if (spike.state === "carried") {
+    // qui arme ? priorité au joueur qui maintient [E] sur un site, sinon un bot attaquant sur le site cible (dégagé)
+    let planter = null, site = null, byPlayer = false, pOnSite = null;
+    if (player.alive) for (const s of SITES) if (Math.hypot(player.x - s.x, player.z - s.z) < PLANT_R) { pOnSite = s; break; }
+    spike._onSite = pOnSite;
+    if (pOnSite && keys.KeyE) { planter = player; site = pOnSite; byPlayer = true; }
+    else for (const e of entities) if (e.alive && e.team === "att" && Math.hypot(e.x - spike.target.x, e.z - spike.target.z) < PLANT_R && siteClearForAtt(spike.target, 11)) { planter = e; site = spike.target; e.moving = false; break; }
+    if (planter) { spike.plantProg += dt; spike._planting = byPlayer; if (spike.plantProg >= PLANT_TIME) plantSpike(site, planter); }
+    else spike.plantProg = Math.max(0, spike.plantProg - dt * 1.6);
+  } else if (spike.state === "planted") {
+    spike.fuse -= dt;
+    const interval = clamp(spike.fuse / FUSE_TIME, 0.16, 1.0);
+    spikeBeepT -= dt; if (spikeBeepT <= 0) { Snd.spikeBeep(spike.fuse < 8); spikeBeepT = interval; }
+    if (spike._light) spike._light.visible = (performance.now() / 1000 % interval) < interval / 2;
+    let defuser = null;
+    for (const e of entities) if (e.alive && e.team === "en" && Math.hypot(e.x - spike.site.x, e.z - spike.site.z) < PLANT_R) { defuser = e; break; }
+    if (defuser) { spike.defuseProg += dt; defuser.moving = false; if (spike.defuseProg >= DEFUSE_TIME) return spikeDefused(); }
+    else spike.defuseProg = Math.max(spike.defuseProg >= DEFUSE_HALF ? DEFUSE_HALF : 0, spike.defuseProg - dt * 0.7);   // garde le palier 50 %
+    if (spike.fuse <= 0) return spikeExplode();
+  }
+}
+function spikeObjective(e) {   // point d'objectif pour les bots (solo)
+  if (online) return null;
+  if (spike.state === "carried" && e.team === "att") return spike.target;
+  if (spike.state === "planted") return spike.site;   // attaquants défendent / défenseurs désamorcent
+  return null;
+}
+function updateObjHUD() {
+  const ow = $("objwrap"), sh = $("spikehud");
+  if (online || roundState !== "live") { ow.hidden = true; sh.hidden = true; return; }
+  if (spike.state === "planted") { sh.hidden = false; $("spikeFuse").textContent = Math.max(0, Math.ceil(spike.fuse)); sh.classList.toggle("hot", spike.fuse < 8); }
+  else sh.hidden = true;
+  if (spike.state === "carried" && player.alive) {
+    ow.hidden = false; ow.classList.remove("defuse");
+    if (spike._onSite) { $("objtxt").textContent = spike.plantProg > 0 ? "Pose de la Spike…" : "Maintiens [E] pour poser"; $("objbarfill").style.width = (spike.plantProg / PLANT_TIME * 100) + "%"; }
+    else { $("objtxt").textContent = "Objectif : pose la Spike (Site A / B)"; $("objbarfill").style.width = "0%"; }
+  } else if (spike.state === "planted" && spike.defuseProg > 0) {
+    ow.hidden = false; ow.classList.add("defuse"); $("objtxt").textContent = "Désamorçage en cours…"; $("objbarfill").style.width = (spike.defuseProg / DEFUSE_TIME * 100) + "%";
+  } else ow.hidden = true;
+}
+
 // ===================== manches =====================
 function spawnTeams() {
   for (const e of entities) { scene.remove(e.mesh); scene.remove(e.ring); }
@@ -1007,7 +1356,7 @@ function spawnTeams() {
 }
 function teamAlive(team) { let n = 0; if (team === "att" && player.alive) n++; for (const e of entities) if (e.alive && e.team === team) n++; return n; }
 function startRound() {
-  roundNum++; spawnTeams(); roundState = "freeze"; roundT = 2.0; oneLeftPlayed = false; roundClock = 120;
+  roundNum++; spawnTeams(); resetSpike(); roundState = "freeze"; roundT = 2.0; oneLeftPlayed = false; roundClock = 120;
   $("sRnd").textContent = "Manche " + roundNum; updateHUD();
   banner("MANCHE " + roundNum, currentMapName + " · " + teamSize + "v" + teamSize, "");
   Snd.start();
@@ -1018,13 +1367,18 @@ function checkRound() {
   if (roundState !== "live" || roundEnded) return;
   const en = teamAlive("en"), att = teamAlive("att");
   if (en === 1 && !oneLeftPlayed) { oneLeftPlayed = true; Snd.oneLeft(); } // clutch : 1 ennemi restant
+  if (!online && spike.state === "planted") {
+    // après la pose : seul le désamorçage ou l'explosion termine la manche. Tuer tous les défenseurs = la spike explosera.
+    if (en === 0) endRound(true, "Défenseurs éliminés");
+    return;   // attaquants morts → la manche continue (la spike tourne)
+  }
   if (en === 0) endRound(true); else if (att === 0) endRound(false);
 }
-function endRound(win) {
+function endRound(win, reason) {
   roundEnded = true; roundState = "end"; roundT = 2.6;
-  if (win) { score.you++; Snd.roundWin(); Snd.aceDing(); banner("MANCHE GAGNÉE", "", "good");   // notre équipe a fait le dernier kill → son ACE (sans voix)
-    if (teamSize > 1 && player.alive && teamAlive("att") === 1) showClutch(); }   // dernier survivant de l'équipe → CLUTCH
-  else { score.en++; Snd.roundLose(); banner("MANCHE PERDUE", "", "bad"); }
+  if (win) { score.you++; Snd.roundWin(); Snd.aceDing(); banner("MANCHE GAGNÉE", reason || "", "good");   // notre équipe a fait le dernier kill → son ACE (sans voix)
+    if (teamSize > 1 && player.alive && teamAlive("att") === 1 && spike.state !== "exploded") showClutch(); }   // dernier survivant de l'équipe → CLUTCH
+  else { score.en++; Snd.roundLose(); banner("MANCHE PERDUE", reason || "", "bad"); }
   updateHUD();
   if (score.you >= 5 || score.en >= 5) { matchOver = true; }
 }
@@ -1051,6 +1405,7 @@ function updateHUD() {
   $("wName").textContent = W().name;
   $("wOp").classList.toggle("on", curW === "op"); $("wPistol").classList.toggle("on", curW === "pistol"); $("wVandal").classList.toggle("on", curW === "vandal");
   $("timer").textContent = roundState === "freeze" ? "Préparez-vous…" : (player && !player.alive && roundState === "live") ? "Éliminé — ton équipe se bat" : "";
+  updateObjHUD();
   // crosshair (caché quand on vise à la lunette)
   $("cross").style.opacity = ads ? "0" : "1";
   const sp = 6 + (firing ? 7 : 0) + ((keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD) ? 3 : 0);
@@ -1118,7 +1473,7 @@ function update(dt) {
     else if (roundState === "end") { roundT -= dt; if (roundT <= 0) { if (matchOver) return endOnlineMatch(); startOnlineRound(); } }
   }
   else if (roundState === "freeze") { roundT -= dt; if (roundT <= 0) { roundState = "live"; roundEnded = false; } }
-  else if (roundState === "live") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endRound(false); } }  // temps écoulé → la défense gagne
+  else if (roundState === "live") { if (spike.state !== "planted") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endRound(false); } } }  // temps écoulé (avant pose) → la défense gagne ; après pose c'est la mèche qui décide
   else if (roundState === "end") { roundT -= dt; if (roundT <= 0) { if (matchOver) return endMatch(); startRound(); } }
   netTick(dt);
 
@@ -1169,16 +1524,18 @@ function update(dt) {
   // bots (seulement en live)
   if (roundState === "live") for (const e of entities) { if (e.net) setBotFrame(e, dt); else updateBot(e, dt); }  // net = piloté par le réseau
   else for (const e of entities) setBotFrame(e, dt);
+  if (!online && roundState === "live") spikeTick(dt);   // pose / mèche / désamorçage
   // tracers
   for (let i = tracers.length - 1; i >= 0; i--) { tracers[i].life -= dt; if (tracers[i].life <= 0) { scene.remove(tracers[i].m); tracers.splice(i, 1); } }
   updateHUD();
 }
 function endMatch() {
-  roundState = "idle"; document.exitPointerLock?.(); $("board").hidden = true;
+  roundState = "idle"; resetSpike(); $("spikehud").hidden = true; $("objwrap").hidden = true; document.exitPointerLock?.(); $("board").hidden = true;
   const win = score.you > score.en; const card = $("overCard"); card.className = "card";
   if (win) Snd.victory();
   $("overTitle").innerHTML = resultBanner(win);
   $("overSub").textContent = win ? "Tu remportes le match !" : "L'équipe adverse l'emporte.";
+  pushHistory(win, score.you, score.en, false);
   $("over").hidden = false;
 }
 function endOnlineMatch() {
@@ -1187,6 +1544,7 @@ function endOnlineMatch() {
   $("overTitle").innerHTML = resultBanner(win);
   $("overSub").textContent = win ? "Partie en ligne remportée !" : "Partie en ligne perdue.";
   if (isHost) { const winServer = (score.you > score.en) ? myTeam : (myTeam === "att" ? "def" : "att"); Net.send({ t: "result", winTeam: winServer, stats: netStats }); }   // persistance ELO/stats
+  pushHistory(win, score.you, score.en, true);
   $("over").hidden = false; setTimeout(() => Net.leave(), 400);   // laisse le temps au result de partir avant de fermer
 }
 
@@ -1209,6 +1567,9 @@ async function loadRoster() {
     }; img.onerror = () => res(); img.src = "avatars/" + e.name + ".png";
   })));
   $("loading").hidden = true; $("startBody").hidden = false;
+  const e0 = list[0], box = document.querySelector(".vl-avatar");   // portrait (visage) sur la carte joueur
+  if (e0 && box) { box.style.backgroundImage = "url(" + (PORTRAITS[e0.name] || "") + ")"; box.style.backgroundSize = "130%"; box.style.backgroundPosition = "center 18%"; box.style.imageRendering = "pixelated"; const av = $("vlAv"); if (av) av.style.display = "none"; }
+  setDiffUI();
   avatarsReady = true;
   tryAutoPlay();   // si on arrive depuis l'éditeur (?play=), lance directement la map perso
 }
@@ -1223,7 +1584,81 @@ function pollSplash() {
 }
 pollSplash();
 function begin(n) { online = false; customMapData = null; teamSize = n; Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; roundNum = 0; STATS = {}; buildMap(currentMap === "pearl" ? "haven" : "pearl"); /* alterne la map à chaque partie */ $("start").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("hud").hidden = false; startRound(); }
-for (const b of document.querySelectorAll(".mode")) b.addEventListener("click", () => begin(Number(b.dataset.n)));
+// ===== launcher : onglets + sélection de mode + bouton JOUER =====
+let selMode = "m5";
+const MODE_SUB = { m5: "Entraînement 5v5", m2: "Duel 2v2", online: "Compétitif en ligne", custom: "Partie perso" };
+function selectMode(mode) {
+  selMode = mode;
+  for (const b of document.querySelectorAll(".vl-mode")) b.classList.toggle("sel", b.dataset.mode === mode);
+  const sub = $("vlPlaySub"); if (sub) sub.textContent = MODE_SUB[mode] || "";
+  const rc = $("roomCode"); if (rc) rc.hidden = (mode !== "online");
+  const dr = $("vlDiffRow"); if (dr) dr.style.display = (mode === "custom") ? "none" : "";
+}
+function playSelected() {
+  if (selMode === "m2") begin(2);
+  else if (selMode === "m5") begin(5);
+  else if (selMode === "online") openOnlineLobby();
+  else if (selMode === "custom") { const s = customStore(); const names = Object.keys(s).filter((n) => n !== "__play__"); if (names.length) beginCustom(s[names[0]]); else showTab("maps"); }
+}
+function showTab(tab) {
+  for (const t of document.querySelectorAll(".vl-tab")) t.classList.toggle("on", t.dataset.tab === tab);
+  for (const v of document.querySelectorAll(".vl-view")) v.classList.toggle("on", v.dataset.view === tab);
+  if (tab === "career") renderCareer();
+  else if (tab === "maps") renderCustList();
+}
+const RANKS = [
+  { min: 0, name: "FER", col: "#8a8f98" }, { min: 900, name: "BRONZE", col: "#b5793b" },
+  { min: 1050, name: "ARGENT", col: "#c7d0d8" }, { min: 1200, name: "OR", col: "#e8c24a" },
+  { min: 1350, name: "PLATINE", col: "#49c5d8" }, { min: 1500, name: "DIAMANT", col: "#b98ff0" },
+  { min: 1700, name: "ASCENDANT", col: "#2fe0a8" }, { min: 1900, name: "IMMORTEL", col: "#ff5b6e" },
+];
+function rankOf(elo) {
+  if (!elo) return { name: "NON CLASSÉ", col: "#8a8f98", pct: 0, txt: "Joue en ligne pour être classé" };
+  let i = 0; for (let j = 0; j < RANKS.length; j++) if (elo >= RANKS[j].min) i = j;
+  const cur = RANKS[i], next = RANKS[i + 1], span = next ? next.min - cur.min : 200, into = elo - cur.min;
+  const sub = Math.min(3, Math.floor(into / (span / 3)) + 1);
+  return { name: cur.name + " " + sub, col: cur.col, pct: next ? Math.max(0, Math.min(100, into / span * 100)) : 100, txt: next ? (elo + " / " + next.min + " ELO") : (elo + " ELO") };
+}
+function renderCareer() {
+  const r = rankOf(myElo);
+  if ($("vlBadge")) $("vlBadge").style.setProperty("--rc", r.col);
+  if ($("vlRankName")) { $("vlRankName").textContent = r.name; $("vlRankName").style.color = (r.col === "#c7d0d8") ? "#fff" : r.col; }
+  if ($("vlRatingFill")) $("vlRatingFill").style.width = r.pct + "%";
+  if ($("vlRatingTxt")) $("vlRatingTxt").textContent = r.txt;
+  const g = (k) => parseInt(localStorage.getItem(k) || "0", 10) || 0;
+  const w = g("valotiz_w"), l = g("valotiz_l"), k = g("valotiz_k"), d = g("valotiz_d");
+  const games = w + l, winp = games ? Math.round(w / games * 100) : 0, kd = d ? (k / d).toFixed(2) : k.toFixed(2);
+  if ($("vlStats")) $("vlStats").innerHTML =
+    '<div class="vl-stat"><b>' + winp + '%</b><span>Victoires</span></div><div class="vl-stat"><b>' + kd + '</b><span>Ratio K/D</span></div><div class="vl-stat"><b>' + k + '</b><span>Kills</span></div><div class="vl-stat"><b>' + games + '</b><span>Parties</span></div>';
+  renderHistory();
+  const box = $("lbRowsTab"); if (box) { box.innerHTML = '<p class="vl-dim">Chargement…</p>'; fetchLeaderboard(); }
+}
+function renderHistory() {
+  let hist = []; try { hist = JSON.parse(localStorage.getItem("valotiz_hist") || "[]"); } catch {}
+  const box = $("vlHist"); if (!box) return;
+  if (!hist.length) { box.innerHTML = '<p class="vl-dim">Aucune partie jouée. Lance une partie depuis JOUER !</p>'; return; }
+  box.innerHTML = hist.slice().reverse().map((h) => '<div class="vl-hrow ' + (h.w ? "win" : "lose") + '"><span class="res">' + (h.w ? "VICTOIRE" : "DÉFAITE") + '</span><span class="mid">' + (h.on ? "En ligne" : "Entraînement") + ' · KDA <b>' + (h.k | 0) + '/' + (h.d | 0) + '</b></span><span class="sc">' + (h.you | 0) + ' - ' + (h.en | 0) + '</span></div>').join("");
+}
+function pushHistory(win, you, en, onlineMatch) {
+  const st = (typeof STATS !== "undefined" && STATS[YOU_KEY]) || {};
+  let hist = []; try { hist = JSON.parse(localStorage.getItem("valotiz_hist") || "[]"); } catch {}
+  hist.push({ w: !!win, you: you | 0, en: en | 0, k: st.k | 0, d: st.d | 0, on: !!onlineMatch, t: Date.now() });
+  if (hist.length > 15) hist = hist.slice(-15);
+  try {
+    localStorage.setItem("valotiz_hist", JSON.stringify(hist));
+    if (!onlineMatch) { const add = (key, v) => localStorage.setItem(key, String((parseInt(localStorage.getItem(key) || "0", 10) || 0) + v)); add(win ? "valotiz_w" : "valotiz_l", 1); add("valotiz_k", st.k | 0); add("valotiz_d", st.d | 0); }
+  } catch {}
+}
+for (const s of document.querySelectorAll(".vl-sub")) s.addEventListener("click", () => {
+  for (const x of document.querySelectorAll(".vl-sub")) x.classList.toggle("on", x === s);
+  for (const v of document.querySelectorAll(".vl-subview")) v.classList.toggle("on", v.dataset.subview === s.dataset.sub);
+  if (s.dataset.sub === "rank") fetchLeaderboard();
+});
+for (const b of document.querySelectorAll(".vl-mode")) b.addEventListener("click", () => selectMode(b.dataset.mode));
+for (const t of document.querySelectorAll(".vl-tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
+$("vlPlay").addEventListener("click", playSelected);
+$("vlGear").addEventListener("click", openSettings);
+selectMode("m5");
 $("again").addEventListener("click", () => { $("over").hidden = true; $("start").hidden = false; });
 
 // ---- maps perso (éditeur) ----
@@ -1259,8 +1694,8 @@ function openSettings() { settingsOpen = true; syncSettingsUI(); $("settings").h
 function closeSettings(resume) { settingsOpen = false; $("settings").hidden = true; if (resume && roundState !== "idle") $("cv").requestPointerLock?.(); }
 function quitToMenu() {
   if (online) { online = false; Net.leave(); }
-  roundState = "idle"; matchOver = false; document.exitPointerLock?.();
-  $("hud").hidden = true; $("board").hidden = true; $("spectate").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("start").hidden = false;
+  roundState = "idle"; matchOver = false; resetSpike(); document.exitPointerLock?.();
+  $("hud").hidden = true; $("board").hidden = true; $("spectate").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("start").hidden = false; $("spikehud").hidden = true; $("objwrap").hidden = true;
 }
 function refreshSetVals() {
   $("setVolV").textContent = Math.round(SETTINGS.vol * 100) + "%"; $("setSxV").textContent = SETTINGS.sensX.toFixed(2);
@@ -1279,6 +1714,7 @@ $("setAds").addEventListener("input", e => { SETTINGS.ads = +e.target.value; ref
 $("setFov").addEventListener("input", e => { SETTINGS.fov = +e.target.value; applySettings(); refreshSetVals(); saveSettings(); });
 $("setInv").addEventListener("change", e => { SETTINGS.invertY = e.target.checked; saveSettings(); });
 $("setResume").addEventListener("click", () => closeSettings(true));
+$("setClose").addEventListener("click", () => closeSettings(true));
 $("setMenu").addEventListener("click", () => { closeSettings(false); quitToMenu(); });
 // ---- lobby 5v5 « en ligne » : on cherche des joueurs, puis on complète avec des bots ----
 let lobbyIv = null, lobbyT = 0;
@@ -1307,21 +1743,18 @@ function fillAndStart() {
   renderLobby(true);
   setTimeout(() => begin(5), 1300);
 }
-$("btnOnline").addEventListener("click", openOnlineLobby);
-// ---- leaderboard (classement ELO) ----
+// ---- leaderboard (classement ELO) → onglet CLASSEMENT ----
 function showLeaderboard(rows) {
-  const box = $("lbRows"), cols = "28px 1fr 56px 60px 52px";
-  if (!rows || !rows.length) box.innerHTML = '<p style="opacity:.7">Aucune partie enregistrée pour l\'instant.</p>';
-  else box.innerHTML = '<div style="display:grid;grid-template-columns:' + cols + ';gap:6px;font-size:12px;opacity:.6;padding:0 6px 4px"><span>#</span><span>Joueur</span><span>ELO</span><span>V-D</span><span>K/D</span></div>' +
-    rows.map((r, i) => { const kd = (r.deaths ? r.kills / r.deaths : (r.kills || 0)).toFixed(2); return '<div style="display:grid;grid-template-columns:' + cols + ';gap:6px;align-items:center;background:rgba(255,255,255,.04);border-radius:7px;padding:6px;margin-bottom:4px;font-size:13px"><b style="opacity:.6">' + (i + 1) + '</b><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name) + '</span><b style="color:#4fd3e6">' + (r.elo | 0) + '</b><span style="opacity:.8">' + (r.wins | 0) + '-' + (r.losses | 0) + '</span><span style="opacity:.8">' + kd + '</span></div>'; }).join("");
-  $("lbPanel").hidden = false;
+  const box = $("lbRowsTab"); if (!box) return; const cols = "28px 1fr 56px 60px 52px";
+  if (!rows || !rows.length) { box.innerHTML = '<p class="vl-dim">Aucune partie enregistrée pour l\'instant — joue en ligne pour apparaître ici.</p>'; return; }
+  box.innerHTML = '<div style="display:grid;grid-template-columns:' + cols + ';gap:6px;font-size:12px;opacity:.55;padding:0 6px 4px"><span>#</span><span>Joueur</span><span>ELO</span><span>V-D</span><span>K/D</span></div>' +
+    rows.map((r, i) => { const kd = (r.deaths ? r.kills / r.deaths : (r.kills || 0)).toFixed(2); return '<div style="display:grid;grid-template-columns:' + cols + ';gap:6px;align-items:center;background:rgba(255,255,255,.04);border-radius:7px;padding:8px;margin-bottom:4px;font-size:14px"><b style="opacity:.6">' + (i + 1) + '</b><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name) + '</span><b style="color:#4fd3e6">' + (r.elo | 0) + '</b><span style="opacity:.8">' + (r.wins | 0) + '-' + (r.losses | 0) + '</span><span style="opacity:.8">' + kd + '</span></div>'; }).join("");
 }
 function fetchLeaderboard() {
   if (Net.ws && Net.ws.readyState === 1) { Net.send({ t: "leaderboard" }); return; }
-  try { const ws = new WebSocket(SRV()); ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.t === "welcome") ws.send(JSON.stringify({ t: "leaderboard" })); else if (m.t === "leaderboard") { showLeaderboard(m.rows); try { ws.close(); } catch {} } } catch {} }; ws.onerror = () => { $("lbRows").innerHTML = '<p style="opacity:.7">Serveur injoignable (lance <b>server.mjs</b>).</p>'; $("lbPanel").hidden = false; }; } catch { $("lbRows").innerHTML = "Serveur injoignable."; $("lbPanel").hidden = false; }
+  const fail = () => { const box = $("lbRowsTab"); if (box) box.innerHTML = '<p class="vl-dim">Serveur injoignable (lance <b>server.mjs</b>, ou déploie le VPS).</p>'; };
+  try { const ws = new WebSocket(SRV()); ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.t === "welcome") ws.send(JSON.stringify({ t: "leaderboard" })); else if (m.t === "leaderboard") { showLeaderboard(m.rows); try { ws.close(); } catch {} } } catch {} }; ws.onerror = fail; } catch { fail(); }
 }
-$("btnLeaderboard").addEventListener("click", fetchLeaderboard);
-$("lbClose").addEventListener("click", () => { $("lbPanel").hidden = true; });
 $("lobbyStart").addEventListener("click", () => { if (Net.ws && Net.ws.readyState === 1) { stopLobbyTimers(); Net.send({ t: "start" }); } else fillAndStart(); });
 $("lobbyCancel").addEventListener("click", () => { stopLobbyTimers(); Net.leave(); $("lobby").hidden = true; $("start").hidden = false; });
 
@@ -1333,10 +1766,13 @@ let online = false, isHost = false, netId = 0, myTeam = "att", myAv = 0, lobbyAu
 let myName = (localStorage.getItem("valotiz_pseudo") || "").trim().slice(0, 14);
 let myPid = localStorage.getItem("valotiz_pid"); if (!myPid) { myPid = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); try { localStorage.setItem("valotiz_pid", myPid); } catch {} }
 const pseudoEl = $("pseudo");
-if (pseudoEl) { pseudoEl.value = myName; pseudoEl.addEventListener("input", () => { myName = pseudoEl.value.trim().slice(0, 14); try { localStorage.setItem("valotiz_pseudo", myName); } catch {} }); }
+if (pseudoEl) { pseudoEl.value = myName; pseudoEl.addEventListener("input", () => { myName = pseudoEl.value.trim().slice(0, 14); try { localStorage.setItem("valotiz_pseudo", myName); } catch {} updateEloLabel(); }); }
 function ensurePseudo() { if (!myName) { myName = "Joueur" + (Math.floor(Math.random() * 9000) + 1000); if (pseudoEl) pseudoEl.value = myName; try { localStorage.setItem("valotiz_pseudo", myName); } catch {} } return myName; }
 let myElo = parseInt(localStorage.getItem("valotiz_elo") || "0", 10) || null, myRoomCode = "";
-function updateEloLabel() { const el = $("eloLabel"); if (el) el.textContent = myElo ? ("ELO " + myElo + (myName ? " · " + myName : "")) : ""; }
+function updateEloLabel() {
+  const el = $("eloLabel"); if (el) el.textContent = myElo ? ("ELO " + myElo) : (myName ? "Prêt à jouer" : "Choisis un pseudo");
+  const ve = $("vlElo"); if (ve) ve.textContent = myElo ? ("ELO " + myElo) : "ELO —";
+}
 function esc(s) { return String(s == null ? "" : s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c])); }
 updateEloLabel();
 let netSendT = 0, worldSendT = 0;
@@ -1364,7 +1800,7 @@ const Net = {
     else if (m.t === "room") onRoom(m);
     else if (m.t === "start") beginOnline(m);
     else if (m.t === "left") removeRemote(m.id);
-    else if (m.t === "me") { myElo = m.elo; try { localStorage.setItem("valotiz_elo", String(m.elo)); } catch {} updateEloLabel(); }
+    else if (m.t === "me") { myElo = m.elo; try { localStorage.setItem("valotiz_elo", String(m.elo)); localStorage.setItem("valotiz_w", String(m.wins | 0)); localStorage.setItem("valotiz_l", String(m.losses | 0)); localStorage.setItem("valotiz_k", String(m.kills | 0)); localStorage.setItem("valotiz_d", String(m.deaths | 0)); } catch {} updateEloLabel(); }
     else if (m.t === "leaderboard") showLeaderboard(m.rows);
     else if (m.t === "relay") onRelay(m.from, m.d);
   },
