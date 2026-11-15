@@ -203,6 +203,9 @@
   .spikehud .sp-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 8px #ff3b3b; animation: spblink 1s infinite; }
   @keyframes spblink { 50% { opacity: .25; } }
   .spikehud.hot { animation: sphot .4s steps(1) infinite; } @keyframes sphot { 50% { background: rgba(130,22,26,.96); border-color: #ff6a6a; } }
+  /* ===== mini-map ===== */
+  #minimap { position: absolute; top: 12px; left: 12px; width: 150px; height: 200px; background: rgba(8,14,26,.5); border: 1px solid rgba(120,200,255,.22); border-radius: 8px; backdrop-filter: blur(3px); box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+  #minimap[hidden] { display: none; }
   /* ===== bannières style Valorant ===== */
   #vb { position: absolute; left: 50%; top: 24%; transform: translate(-50%,-50%); z-index: 46; pointer-events: none; text-align: center; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; }
   #vb[hidden] { display: none; }
@@ -344,6 +347,7 @@
   <div class="timer" id="timer"></div>
   <div class="spectate" id="spectate" hidden>SPECTATEUR · <b id="specName"></b><span class="spechint">clic = joueur suivant</span></div>
   <div class="feed" id="feed"></div>
+  <canvas id="minimap" width="150" height="200"></canvas>
   <div class="cross" id="cross"><i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i></div>
   <div class="hitm" id="hitm"><i class="a"></i><i class="b2"></i><i class="c"></i><i class="d"></i></div>
   <div class="vit" id="vit"></div>
@@ -485,6 +489,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "./GLTFLoader.js";
 import { SCIFI_KIT } from "./scifikit.js";
+import { SPIKE_GLB } from "./spikemodel.js";
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -718,6 +723,9 @@ let kitReadyCb = null;
     scifiLoader.parse(bin, "", (g) => { KIT[k] = g.scene; done(); }, () => done());
   }
 })();
+// modèle 3D de la Spike (texturé, fourni) : chargé une fois, cloné à chaque pose
+let SPIKE_MODEL = null;
+(function () { const bin = Uint8Array.from(atob(SPIKE_GLB), (c) => c.charCodeAt(0)).buffer; scifiLoader.parse(bin, "", (g) => { g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; } }); SPIKE_MODEL = g.scene; }, () => {}); })();
 // construit des InstancedMesh pour une pièce du kit (perf : quelques draw calls pour des centaines de panneaux)
 function instanceKit(root, matrices, accentHex) {
   if (!root || !matrices.length) return;
@@ -830,6 +838,42 @@ function buildMap(key) {
   th.dome();
   if (customMapData) buildCustomBlockout(customMapData);   // map perso → structure de l'éditeur
   else { buildBlockout(); th.props(); }                      // map intégrée
+  mmDirty = true;                                            // la mini-map se reconstruira (nouveaux murs)
+}
+// ===================== mini-map (haut-gauche) =====================
+const mmCanvas = $("minimap"), mmx = mmCanvas.getContext("2d");
+const mmBG = document.createElement("canvas"); mmBG.width = 150; mmBG.height = 200; const mmbx = mmBG.getContext("2d");
+let mmDirty = true;
+const MM_PAD = 10, mmSc = () => Math.min((150 - 2 * MM_PAD) / (2 * MAPX), (200 - 2 * MM_PAD) / (2 * MAPZ));
+const mmPX = (x) => 75 + x * mmSc(), mmPY = (z) => 100 + z * mmSc();
+function buildMinimapBG() {
+  mmbx.clearRect(0, 0, 150, 200);
+  mmbx.fillStyle = "rgba(18,28,38,.6)"; mmbx.fillRect(mmPX(-MAPX), mmPY(-MAPZ), 2 * MAPX * mmSc(), 2 * MAPZ * mmSc());
+  for (const w of WALLS) {                                        // murs pleins = clairs, caisses = estompées
+    mmbx.fillStyle = w.h >= 4 ? "rgba(150,180,205,.5)" : "rgba(120,140,160,.3)";
+    mmbx.fillRect(mmPX(w.x0), mmPY(w.z0), Math.max(1.2, (w.x1 - w.x0) * mmSc()), Math.max(1.2, (w.z1 - w.z0) * mmSc()));
+  }
+  for (const s of SITES) {                                        // sites A/B
+    mmbx.strokeStyle = "rgba(255,120,120,.75)"; mmbx.lineWidth = 1.3; mmbx.beginPath(); mmbx.arc(mmPX(s.x), mmPY(s.z), 3.6 * mmSc(), 0, TAU); mmbx.stroke();
+    mmbx.fillStyle = "rgba(255,170,170,.9)"; mmbx.font = "bold 10px system-ui"; mmbx.textAlign = "center"; mmbx.textBaseline = "middle"; mmbx.fillText(s.label, mmPX(s.x), mmPY(s.z));
+  }
+}
+const mmDot = (x, z, col, r) => { mmx.fillStyle = col; mmx.beginPath(); mmx.arc(mmPX(x), mmPY(z), r || 2.6, 0, TAU); mmx.fill(); };
+function drawMinimap() {
+  if (mmDirty) { buildMinimapBG(); mmDirty = false; }
+  mmx.clearRect(0, 0, 150, 200); mmx.drawImage(mmBG, 0, 0);
+  if (!online && spike.state === "planted" && spike.site) {       // spike posée (losange rouge clignotant)
+    const x = mmPX(spike.site.x), y = mmPY(spike.site.z); mmx.save(); mmx.translate(x, y); mmx.rotate(Math.PI / 4); mmx.fillStyle = (performance.now() / 300 | 0) % 2 ? "#ff3b3b" : "#ff9a9a"; mmx.fillRect(-3.2, -3.2, 6.4, 6.4); mmx.restore();
+  }
+  for (const e of entities) {                                     // alliés toujours, ennemis seulement s'ils sont en vue
+    if (!e.alive) continue;
+    if (e.team === "att") mmDot(e.x, e.z, "#5fe0f0");
+    else if (player && player.alive && hasLOS(player.x, player.z, e.x, e.z)) mmDot(e.x, e.z, "#ff6a6a");
+  }
+  if (player && player.alive) {                                   // joueur = flèche orientée (ton spawn est en bas)
+    const px = mmPX(player.x), py = mmPY(player.z), fx = -Math.sin(yaw), fy = -Math.cos(yaw), rx = -fy, ry = fx;
+    mmx.fillStyle = "#ffd34d"; mmx.beginPath(); mmx.moveTo(px + fx * 7, py + fy * 7); mmx.lineTo(px - fx * 4 + rx * 4, py - fy * 4 + ry * 4); mmx.lineTo(px - fx * 4 - rx * 4, py - fy * 4 - ry * 4); mmx.closePath(); mmx.fill();
+  }
 }
 buildMap("pearl");
 if (location.search.includes("dbg")) window.__dbg = { buildMap, get KIT() { return KIT; }, camera, renderer, scene, THREE };
@@ -1077,7 +1121,7 @@ function shoot() {
   for (const e of entities) { if (!e.alive || e.team !== "en") continue; const t = rayEnemyT(ox, oy, oz, nx, ny, nz, e, 0.42); if (t < bestT) { bestT = t; hitE = e; } }
   if (hitE) {
     const hy = oy + ny * bestT, head = hy >= 1.45, dmg = head ? w.dmgHead : w.dmgBody;
-    showHit(head); head ? Snd.head() : Snd.hit();
+    showHit(head); head ? Snd.head() : Snd.hit(); impactSpark(ox + nx * bestT, oy + ny * bestT, oz + nz * bestT, 0xff7a6a);   // étincelle sur touche
     if (online) {
       if (hitE.human) Net.relay({ k: "hit", target: hitE.netid, dmg, head, by: netId });      // l'humain touché applique lui-même
       else if (isHost) { hitE.hp -= dmg; if (hitE.hp <= 0) onlineKill(hitE, netId, head); }     // bot : l'hôte fait autorité
@@ -1085,10 +1129,20 @@ function shoot() {
     } else {
       recDmg(hitE, YOU_KEY); hitE.hp -= dmg; if (hitE.hp <= 0) killBot(hitE, player, head);
     }
-  } else if (!w.melee) tracerMiss(ox, oy, oz, nx, ny, nz, bestT);
+  } else if (!w.melee) { tracerMiss(ox, oy, oz, nx, ny, nz, bestT); if (tWall < w.range) bulletImpact(ox + nx * tWall, oy + ny * tWall, oz + nz * tWall, nx, ny, nz); }   // impact mural
 }
 const tracers = [];
 function tracerMiss(ox, oy, oz, nx, ny, nz, t) { const R = W().range, tt = Math.min(t, R); const p = new THREE.Mesh(new THREE.SphereGeometry(0.03, 5, 4), new THREE.MeshBasicMaterial({ color: 0xffe08a })); p.position.set(ox + nx * tt, oy + ny * tt, oz + nz * tt); scene.add(p); tracers.push({ m: p, life: 0.05 }); }
+// ---- impacts de balle (décalque + étincelle) ----
+const impacts = [], IMPACT_MAX = 36, impactGeo = new THREE.CircleGeometry(0.1, 12);
+function impactSpark(x, y, z, col) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.05, 5, 4), new THREE.MeshBasicMaterial({ color: col })); s.position.set(x, y, z); scene.add(s); tracers.push({ m: s, life: 0.07 }); }
+function bulletImpact(x, y, z, nx, ny, nz) {
+  const m = new THREE.Mesh(impactGeo, new THREE.MeshBasicMaterial({ color: 0x0a0806, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
+  m.position.set(x - nx * 0.02, y - ny * 0.02, z - nz * 0.02); m.lookAt(x - nx, y - ny, z - nz);   // face au tireur (≈ normale du mur)
+  scene.add(m); impacts.push({ m, life: 5 });
+  if (impacts.length > IMPACT_MAX) { const o = impacts.shift(); scene.remove(o.m); }
+  impactSpark(x, y, z, 0xffd27a);
+}
 
 function showHit(head) { const h = $("hitm"); h.className = "hitm" + (head ? " hs" : ""); h.style.transition = "none"; h.style.opacity = "1"; requestAnimationFrame(() => { h.style.transition = "opacity .3s"; h.style.opacity = "0"; }); }
 const TEAMCOL = (t) => t === "att" ? "#5fe0f0" : "#ff7a7a";
@@ -1270,11 +1324,13 @@ function resetSpike() {
 }
 function makeSpikeMesh(x, z) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.95, 0.5), new THREE.MeshStandardMaterial({ color: 0x15181d, emissive: 0x3a0000, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.4 }));
-  body.position.y = 0.48; g.add(body);
-  const prongs = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), new THREE.MeshStandardMaterial({ color: 0x8a1010 }));
-  prongs.position.y = 1.15; g.add(prongs);
-  const light = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); light.position.y = 1.5; g.add(light);
+  if (SPIKE_MODEL) {                                   // modèle texturé fourni, mis à l'échelle (~0,95 u de haut) posé au sol
+    const m = SPIKE_MODEL.clone(true); const s = 0.29; m.scale.set(s, s, s); m.position.y = -0.37 * s; g.add(m);
+  } else {                                             // repli procédural si le modèle n'est pas encore chargé
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.95, 0.5), new THREE.MeshStandardMaterial({ color: 0x15181d, emissive: 0x3a0000, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.4 }));
+    body.position.y = 0.48; g.add(body);
+  }
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); light.position.y = 1.02; g.add(light);
   g.position.set(x, 0, z); scene.add(g); spike._light = light; return g;
 }
 function siteClearForAtt(site, r) {   // aucun défenseur vivant trop près (le bot n'arme pas sous le feu immédiat)
@@ -1405,7 +1461,7 @@ function updateHUD() {
   $("wName").textContent = W().name;
   $("wOp").classList.toggle("on", curW === "op"); $("wPistol").classList.toggle("on", curW === "pistol"); $("wVandal").classList.toggle("on", curW === "vandal");
   $("timer").textContent = roundState === "freeze" ? "Préparez-vous…" : (player && !player.alive && roundState === "live") ? "Éliminé — ton équipe se bat" : "";
-  updateObjHUD();
+  updateObjHUD(); drawMinimap();
   // crosshair (caché quand on vise à la lunette)
   $("cross").style.opacity = ads ? "0" : "1";
   const sp = 6 + (firing ? 7 : 0) + ((keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD) ? 3 : 0);
@@ -1527,6 +1583,7 @@ function update(dt) {
   if (!online && roundState === "live") spikeTick(dt);   // pose / mèche / désamorçage
   // tracers
   for (let i = tracers.length - 1; i >= 0; i--) { tracers[i].life -= dt; if (tracers[i].life <= 0) { scene.remove(tracers[i].m); tracers.splice(i, 1); } }
+  for (let i = impacts.length - 1; i >= 0; i--) { const im = impacts[i]; im.life -= dt; if (im.life < 1) im.m.material.opacity = Math.max(0, im.life) * 0.9; if (im.life <= 0) { scene.remove(im.m); impacts.splice(i, 1); } }
   updateHUD();
 }
 function endMatch() {
