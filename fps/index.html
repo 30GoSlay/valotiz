@@ -37,6 +37,13 @@
   .tclockwrap { display: flex; flex-direction: column; align-items: center; line-height: 1; }
   .tclock { font-weight: 900; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: 1px; } .tclock.low { color: #ff6a6a; }
   .tclockwrap .rnd { font-size: 10px; opacity: .55; font-weight: 700; margin-top: 3px; }
+  /* ---- HUD survie (Cabin Fever) ---- */
+  .survhud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); min-width: 230px; text-align: center; background: linear-gradient(180deg, rgba(20,10,12,.9), rgba(10,6,8,.92)); border: 1px solid rgba(120,200,120,.3); border-radius: 10px; padding: 7px 20px; box-shadow: 0 4px 16px rgba(0,0,0,.45), inset 0 0 24px rgba(60,160,60,.07); }
+  .survhud[hidden] { display: none; }
+  .survhud .sv-wave { font-weight: 900; font-size: 20px; letter-spacing: 3px; color: #e7f6e2; } .survhud .sv-wave b { color: #7fe06a; }
+  .survhud .sv-mid { display: flex; justify-content: center; gap: 16px; font-size: 12px; font-weight: 700; margin-top: 2px; letter-spacing: .5px; }
+  .survhud .sv-left { color: #ff8a8a; } .survhud .sv-left b { color: #ff6a6a; }
+  .survhud .sv-best { color: #9fb2c4; } .survhud .sv-best b { color: #ffd34d; }
   .timer { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); font-size: 13px; opacity: .8; font-weight: 700; }
   .spectate { position: absolute; bottom: 92px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: rgba(8,14,30,.7); border: 1px solid rgba(255,255,255,.14); border-radius: 20px; padding: 7px 16px; font-weight: 800; font-size: 14px; letter-spacing: 1px; backdrop-filter: blur(4px); }
   .spectate[hidden] { display: none; }
@@ -343,11 +350,12 @@
 </div>
 <canvas id="cv"></canvas>
 <div class="hud" id="hud" hidden>
-  <div class="topbar">
+  <div class="topbar" id="topbar">
     <div class="tteam att" id="tAtt"></div>
     <div class="tmid"><span class="tscore you" id="sYou">0</span><div class="tclockwrap"><span class="tclock" id="tClock">2:00</span><span class="rnd" id="sRnd">Manche 1</span></div><span class="tscore en" id="sEn">0</span></div>
     <div class="tteam en" id="tEn2"></div>
   </div>
+  <div class="survhud" id="survhud" hidden><div class="sv-wave">VAGUE <b id="svWave">1</b></div><div class="sv-mid"><span class="sv-left"><b id="svLeft">0</b> infectés</span><span class="sv-best">record <b id="svBest">0</b></span></div></div>
   <div class="timer" id="timer"></div>
   <div class="spectate" id="spectate" hidden>SPECTATEUR · <b id="specName"></b><span class="spechint">clic = joueur suivant</span></div>
   <div class="feed" id="feed"></div>
@@ -400,6 +408,7 @@
           <button class="vl-mode mode on" data-mode="m5" data-n="5"><b>ENTRAÎNEMENT</b><span>5v5 · ~8 min</span></button>
           <button class="vl-mode mode" data-mode="m2" data-n="2"><b>DUEL</b><span>2v2 · ~5 min</span></button>
           <button class="vl-mode" data-mode="online"><b>COMPÉTITIF</b><span>5v5 en ligne · ELO</span></button>
+          <button class="vl-mode" data-mode="survie"><b>CABIN FEVER</b><span>survie · vagues d'infectés</span></button>
           <button class="vl-mode" data-mode="custom"><b>PARTIE PERSO</b><span>tes maps</span></button>
         </div>
         <div class="vl-playrow">
@@ -507,7 +516,8 @@ const Snd = (() => {
   const FILES = { shoot: "shoot.mp3", reload: "reload.mp3", headshot: "headshot.mp3", kill: "kill.mp3", roundwin: "roundwin.mp3", roundlose: "roundlose.mp3", victory: "victory.mp3", oneleft: "oneleft.mp3",
     sniper: "sniper.mp3", sniperreload: "sniperreload.mp3",
     kill1: "kill1.mp3", kill2: "kill2.mp3", kill3: "kill3.mp3", kill4: "kill4.mp3", killace: "killace.mp3",
-    vtriple: "vtriple.mp3", vquadra: "vquadra.mp3", vace: "vace.mp3" };
+    vtriple: "vtriple.mp3", vquadra: "vquadra.mp3", vace: "vace.mp3",
+    spikeplant: "spikeplant.mp3", spikedefuse: "spikedefuse.mp3" };
   const ac = () => ctx || (ctx = new (window.AudioContext || window.webkitAudioContext)());
   async function load() { if (loaded) return; loaded = true; const c = ac(); await Promise.all(Object.entries(FILES).map(async ([k, f]) => { try { const ab = await (await fetch("sounds/" + f)).arrayBuffer(); buffers[k] = await c.decodeAudioData(ab); } catch (e) {} })); }
   function play(k, vol, rate) { const c = ac(), b = buffers[k]; if (!b) return; const s = c.createBufferSource(); s.buffer = b; const g = c.createGain(); g.gain.value = vol == null ? 1 : vol; if (rate) s.playbackRate.value = rate; s.connect(g).connect(mg()); s.start(); }
@@ -521,10 +531,10 @@ const Snd = (() => {
     sniperShot: () => play("sniper", 0.6),
     pistolShot: () => play("shoot", 0.5, 1.32),   // même tir, plus aigu/claquant
     knife() { const c = ac(), o = c.createOscillator(), g = c.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(760, c.currentTime); o.frequency.exponentialRampToValueAtTime(170, c.currentTime + 0.12); g.gain.setValueAtTime(0.2, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.14); o.connect(g).connect(mg()); o.start(); o.stop(c.currentTime + 0.16); },  // « whoosh » synthé
-    // ---- spike (synthétisé) ----
-    spikePlant() { tick(440, 0.08, 0.18); setTimeout(() => tick(620, 0.12, 0.2), 90); },
+    // ---- spike (fichiers Valorant, repli synthétisé) ----
+    spikePlant() { if (buffers.spikeplant) play("spikeplant", 0.7); else { tick(440, 0.08, 0.18); setTimeout(() => tick(620, 0.12, 0.2), 90); } },
     spikeBeep(hot) { tick(hot ? 1500 : 1050, 0.05, 0.14); },
-    defused() { tick(880, 0.1, 0.2); setTimeout(() => tick(590, 0.14, 0.2), 110); setTimeout(() => tick(400, 0.18, 0.18), 240); },
+    defused() { if (buffers.spikedefuse) play("spikedefuse", 0.7); else { tick(880, 0.1, 0.2); setTimeout(() => tick(590, 0.14, 0.2), 110); setTimeout(() => tick(400, 0.18, 0.18), 240); } },
     spikeBoom() { const c = ac(), n = (c.sampleRate * 0.9) | 0, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2); const s = c.createBufferSource(); s.buffer = b; const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 340; const g = c.createGain(); g.gain.value = 0.55; s.connect(f).connect(g).connect(mg()); s.start(); },
     step, reload: () => play("reload", 0.6), sniperReload: () => play("sniperreload", 0.6),
     death: () => play("kill", 0.55),
@@ -728,8 +738,8 @@ let kitReadyCb = null;
   }
 })();
 // modèle 3D de la Spike (texturé, fourni) : chargé une fois, cloné à chaque pose
-let SPIKE_MODEL = null;
-(function () { const bin = Uint8Array.from(atob(SPIKE_GLB), (c) => c.charCodeAt(0)).buffer; scifiLoader.parse(bin, "", (g) => { g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; } }); SPIKE_MODEL = g.scene; }, () => {}); })();
+let SPIKE_MODEL = null, SPIKE_ANIMS = null;
+(function () { const bin = Uint8Array.from(atob(SPIKE_GLB), (c) => c.charCodeAt(0)).buffer; scifiLoader.parse(bin, "", (g) => { g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; } }); SPIKE_MODEL = g.scene; SPIKE_ANIMS = g.animations && g.animations.length ? g.animations : null; }, () => {}); })();
 // construit des InstancedMesh pour une pièce du kit (perf : quelques draw calls pour des centaines de panneaux)
 function instanceKit(root, matrices, accentHex) {
   if (!root || !matrices.length) return;
@@ -1091,16 +1101,20 @@ addEventListener("mousedown", e => {
 addEventListener("mouseup", e => { if (e.button === 0) firing = false; });
 function tryShoot() { if (roundState === "live" && player && player.alive && fireTimer <= 0 && reloading <= 0) shoot(); }
 // ---- spectateur (à la mort, on suit un allié vivant) ----
-let specTarget = 0;
+let specTarget = 0, _specPrev = -1, _spX = 0, _spZ = 0, _spA = 0, _spLX = 0, _spLZ = 0;
 function livingAllies() { return entities.filter(e => e.team === "att" && e.alive); }
 function spectateCam() {
   RIG.visible = false; $("spectate").hidden = false;
   const al = livingAllies();
   if (al.length) {
-    const t = al[specTarget % al.length], a = t.faceAngle == null ? Math.PI : t.faceAngle;
-    camera.position.set(t.x - Math.sin(a) * 4.6, 3.2, t.z - Math.cos(a) * 4.6);
-    camera.lookAt(t.x, 1.45, t.z); $("specName").textContent = t.name;
-  } else { camera.position.set(0, 44, 58); camera.lookAt(0, 0, -4); $("specName").textContent = "vue d'ensemble"; }
+    const idx = specTarget % al.length, t = al[idx], a = t.faceAngle == null ? Math.PI : t.faceAngle;
+    if (_specPrev !== idx) { _spA = a; _spLX = t.x; _spLZ = t.z; _spX = t.x - Math.sin(a) * 4.6; _spZ = t.z - Math.cos(a) * 4.6; _specPrev = idx; }   // nouveau joueur suivi → placement direct
+    _spA += Math.atan2(Math.sin(a - _spA), Math.cos(a - _spA)) * 0.06;    // angle lissé → tue le tremblement quand le bot est coincé au mur
+    const dx = t.x - Math.sin(_spA) * 4.6, dz = t.z - Math.cos(_spA) * 4.6;
+    _spX += (dx - _spX) * 0.1; _spZ += (dz - _spZ) * 0.1;                  // position lissée
+    _spLX += (t.x - _spLX) * 0.14; _spLZ += (t.z - _spLZ) * 0.14;          // cible de regard lissée
+    camera.position.set(_spX, 3.2, _spZ); camera.lookAt(_spLX, 1.45, _spLZ); $("specName").textContent = t.name;
+  } else { _specPrev = -1; camera.position.set(0, 44, 58); camera.lookAt(0, 0, -4); $("specName").textContent = "vue d'ensemble"; }
 }
 
 function refreshGun() { gunR.visible = !ads && curW === "vandal"; gunS.visible = !ads && curW === "op"; gunP.visible = !ads && curW === "pistol"; }
@@ -1169,7 +1183,7 @@ function killBot(e, killer, head) {
   const kn = killer === player ? "Toi" : (killer && killer.name) || "?";
   killFeed(kn, e.name, e.team, head);
   if (killer === player) { roundKills++; Snd.streak(roundKills); showKillBadge(roundKills); }  // série de kills du joueur
-  checkRound();
+  if (survival.on) survivalOnKill(e); else checkRound();
 }
 // bannières : badge crâne (kill simple, en bas-centre) + bannière texte de série (2+ kills, en haut)
 let vbT = null, kbT = null;
@@ -1217,6 +1231,15 @@ function nearestCover(e, foe) {
 }
 function updateBot(e, dt) {
   if (!e.alive) return;
+  if (e.zombie) {   // infecté : fonce sur le joueur et frappe au corps-à-corps
+    e.atkCD = Math.max(0, (e.atkCD || 0) - dt);
+    if (player && player.alive) {
+      const dd = Math.hypot(player.x - e.x, player.z - e.z); e.faceAngle = Math.atan2(player.x - e.x, player.z - e.z);
+      if (dd > 1.5) botMove(e, player.x, player.z, e.zspd, dt);
+      else { e.moving = false; if (e.atkCD <= 0) { hurtPlayer(e.zdmg, false, e); e.atkCD = e.zatk; Snd.knife(); } }
+    } else e.moving = false;
+    setBotFrame(e, dt); return;
+  }
   e.fireCD -= dt; e.reloadCD = Math.max(0, (e.reloadCD || 0) - dt);
   // mode évasion : coincé → filer vers la direction la plus dégagée (plus de bots bloqués dans un mur)
   if (e.escape) {
@@ -1314,6 +1337,7 @@ function hurtPlayer(dmg, head, attacker) {
   if (pHP <= 0) {
     pHP = 0; player.alive = false; setADS(false);   // sort de la lunette à la mort (sinon on reste coincé dans le viseur en spectateur)
     if (online) { killFeed(attacker ? attacker.name : "?", "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: attacker ? attacker.name : null, head }); if (isHost) { ns(netId).d++; checkOnlineRound(); } }   // tué par un bot → pas de crédit humain
+    else if (survival.on) { killFeed(attacker ? attacker.name : null, "Toi", "att", head); survivalGameOver(); }
     else { if (attacker) creditKill(player, attacker); killFeed(attacker ? attacker.name : null, "Toi", "att", head); checkRound(); }
   }
 }
@@ -1324,7 +1348,7 @@ const PLANT_R = 3.6, PLANT_TIME = 3.2, DEFUSE_TIME = 6.5, DEFUSE_HALF = 3.5, FUS
 let spike = { state: "carried", site: null, target: null, fuse: 0, plantProg: 0, defuseProg: 0, mesh: null, _light: null, _onSite: null, _planting: false };
 let spikeBeepT = 0;
 function resetSpike() {
-  if (spike.mesh) { scene.remove(spike.mesh); spike.mesh = null; spike._light = null; }
+  if (spike.mesh) { scene.remove(spike.mesh); spike.mesh = null; spike._light = null; spike._mixer = null; }
   spike.state = "carried"; spike.site = null; spike.fuse = 0; spike.plantProg = 0; spike.defuseProg = 0; spike._onSite = null; spike._planting = false;
   spike.target = SITES[(Math.random() * SITES.length) | 0];   // site visé par les bots attaquants
   spikeBeepT = 0;
@@ -1332,8 +1356,10 @@ function resetSpike() {
 function makeSpikeMesh(x, z) {
   const g = new THREE.Group();
   const s = 0.42;                                      // taille plus proche de l'original (~1,5 u de haut), bien visible
+  spike._mixer = null;
   if (SPIKE_MODEL) {                                   // modèle texturé fourni, posé au sol
     const m = SPIKE_MODEL.clone(true); m.scale.set(s, s, s); m.position.y = -0.37 * s; g.add(m);
+    if (SPIKE_ANIMS) { spike._mixer = new THREE.AnimationMixer(m); spike._mixer.clipAction(SPIKE_ANIMS[0]).play(); }   // animation d'inactivité intégrée
   } else {                                             // repli procédural si le modèle n'est pas encore chargé
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.95, 0.5), new THREE.MeshStandardMaterial({ color: 0x15181d, emissive: 0x3a0000, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.4 }));
     body.position.y = 0.48; g.add(body);
@@ -1354,7 +1380,9 @@ function spikeExplode() { if (spike.state !== "planted") return; spike.state = "
 function spikeDefused() { if (spike.state !== "planted") return; spike.state = "defused"; Snd.defused(); endRound(false, "Spike désamorcée"); }
 // tour de boucle de la spike (uniquement en solo, manche live)
 function spikeTick(dt) {
-  if (online) return;
+  if (online || survival.on) return;
+  if (spike._mixer) spike._mixer.update(dt);            // anime la Spike posée
+
   if (spike.state === "carried") {
     // qui arme ? priorité au joueur qui maintient [E] sur un site, sinon un bot attaquant sur le site cible (dégagé)
     let planter = null, site = null, byPlayer = false, pOnSite = null;
@@ -1368,7 +1396,7 @@ function spikeTick(dt) {
     spike.fuse -= dt;
     const interval = clamp(spike.fuse / FUSE_TIME, 0.16, 1.0);
     spikeBeepT -= dt; if (spikeBeepT <= 0) { Snd.spikeBeep(spike.fuse < 8); spikeBeepT = interval; }
-    if (spike._light) spike._light.visible = (performance.now() / 1000 % interval) < interval / 2;
+    if (spike._light) { const ph = (performance.now() / 1000 % interval) / interval; spike._light.visible = true; spike._light.scale.setScalar(0.55 + 0.85 * Math.max(0, Math.sin(ph * Math.PI))); }   // pulse qui s'accélère avec la mèche
     let defuser = null;
     for (const e of entities) if (e.alive && e.team === "en" && Math.hypot(e.x - spike.site.x, e.z - spike.site.z) < PLANT_R) { defuser = e; break; }
     if (defuser) { spike.defuseProg += dt; defuser.moving = false; if (spike.defuseProg >= DEFUSE_TIME) return spikeDefused(); }
@@ -1376,24 +1404,87 @@ function spikeTick(dt) {
     if (spike.fuse <= 0) return spikeExplode();
   }
 }
-function spikeObjective(e) {   // point d'objectif pour les bots (solo)
-  if (online) return null;
+function spikeObjective(e) {   // point d'objectif pour les bots
+  if (survival.on) return null;
+  if (online) {   // bots de l'hôte : objectif en coords locales (mir du canonique)
+    if (!isHost) return null;
+    if (spike.state === "carried" && e.serverTeam === "att") { const [lx, lz] = mir(spike.target.x, spike.target.z); return { x: lx, z: lz }; }
+    if (spike.state === "planted" && spike.site) { const [lx, lz] = mir(spike.site.x, spike.site.z); return { x: lx, z: lz }; }
+    return null;
+  }
   if (spike.state === "carried" && e.team === "att") return spike.target;
   if (spike.state === "planted") return spike.site;   // attaquants défendent / défenseurs désamorcent
   return null;
 }
 function updateObjHUD() {
   const ow = $("objwrap"), sh = $("spikehud");
-  if (online || roundState !== "live") { ow.hidden = true; sh.hidden = true; return; }
+  if (survival.on || roundState !== "live") { ow.hidden = true; sh.hidden = true; return; }
   if (spike.state === "planted") { sh.hidden = false; $("spikeFuse").textContent = Math.max(0, Math.ceil(spike.fuse)); sh.classList.toggle("hot", spike.fuse < 8); }
   else sh.hidden = true;
-  if (spike.state === "carried" && player.alive) {
-    ow.hidden = false; ow.classList.remove("defuse");
-    if (spike._onSite) { $("objtxt").textContent = spike.plantProg > 0 ? "Pose de la Spike…" : "Maintiens [E] pour poser"; $("objbarfill").style.width = (spike.plantProg / PLANT_TIME * 100) + "%"; }
-    else { $("objtxt").textContent = "Objectif : pose la Spike (Site A / B)"; $("objbarfill").style.width = "0%"; }
-  } else if (spike.state === "planted" && spike.defuseProg > 0) {
+  const amAtt = !online || myTeam === "att", amDef = online && myTeam === "def", alive = player && player.alive;
+  let onSite = null; if (alive) for (const s of SITES) { const [lx, lz] = mir(s.x, s.z); if (Math.hypot(player.x - lx, player.z - lz) < PLANT_R) { onSite = s; break; } }
+  let onSpike = false; if (spike.site && alive) { const [lx, lz] = mir(spike.site.x, spike.site.z); onSpike = Math.hypot(player.x - lx, player.z - lz) < PLANT_R; }
+  if (spike.state === "carried" && amAtt && alive) {
+    if (onSite) { ow.hidden = false; ow.classList.remove("defuse"); $("objtxt").textContent = spike.plantProg > 0 ? "Pose de la Spike…" : "Maintiens [E] pour poser"; $("objbarfill").style.width = (spike.plantProg / PLANT_TIME * 100) + "%"; }
+    else if (!online) { ow.hidden = false; ow.classList.remove("defuse"); $("objtxt").textContent = "Objectif : pose la Spike (Site A / B)"; $("objbarfill").style.width = "0%"; }
+    else ow.hidden = true;
+  } else if (spike.state === "planted" && amDef && alive && (onSpike || spike.defuseProg > 0)) {
+    ow.hidden = false; ow.classList.add("defuse"); $("objtxt").textContent = onSpike ? "Maintiens [E] pour désamorcer…" : "Désamorçage en cours…"; $("objbarfill").style.width = (spike.defuseProg / DEFUSE_TIME * 100) + "%";
+  } else if (spike.state === "planted" && !online && spike.defuseProg > 0) {
     ow.hidden = false; ow.classList.add("defuse"); $("objtxt").textContent = "Désamorçage en cours…"; $("objbarfill").style.width = (spike.defuseProg / DEFUSE_TIME * 100) + "%";
   } else ow.hidden = true;
+}
+
+// ===================== MODE SURVIE « Cabin Fever » =====================
+const SURV_SPAWNS = [[-36, -56], [0, -58], [36, -56], [-40, -24], [40, -24], [-40, 24], [40, 24], [-36, 56], [0, 58], [36, 56]];
+const SURV_MAXALIVE = 14;
+let survival = { on: false, wave: 0, alive: 0, pending: 0, state: "idle", spawnT: 0, breakT: 0, best: 0 };
+const waveSize = (n) => 6 + n * 3;
+const zombieStats = (n) => ({ hp: 55 + n * 15, spd: 2.5 + Math.min(n * 0.1, 1.9), dmg: 7 + n * 1.1, atk: 0.9 });
+const survBanner = (t, s) => banner(t, s || "", "");
+function clearEntities() { for (const e of entities) { scene.remove(e.mesh); scene.remove(e.ring); } entities = []; }
+function beginSurvival() {
+  online = false; customMapData = null; survival.on = true; teamSize = 1; Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; STATS = {};
+  survival.wave = 0; survival.alive = 0; survival.pending = 0; survival.state = "break"; survival.breakT = 3.5;
+  try { survival.best = +(localStorage.getItem("valotiz_surv") || 0); } catch (e) { survival.best = 0; }
+  buildMap(currentMap === "pearl" ? "haven" : "pearl"); clearEntities(); resetSpike();
+  player = { team: "att", alive: true, x: 0, z: 30, y: 0, vy: 0, isPlayer: true };
+  pHP = 100; pArmor = 50; reloading = 0; yaw = Math.PI; pitch = 0;
+  arms.vandal = { mag: 25, reserve: 9999 }; arms.op = { mag: 5, reserve: 9999 }; arms.pistol = { mag: 6, reserve: 9999 };
+  curW = "vandal"; ads = false; camera.fov = BASEFOV; camera.updateProjectionMatrix(); $("scope").hidden = true; refreshGun();
+  roundKills = 0; $("vb").hidden = true; $("killbadge").hidden = true; stat(YOU_KEY, "att", "Toi", ROSTER[0]);
+  $("start").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("hud").hidden = false;
+  roundState = "live"; roundNum = 1; survBanner("CABIN FEVER", "Survis aux vagues d'infectés…"); updateHUD();
+  if (!locked) $("cv").requestPointerLock?.();
+}
+function startWave(n) {
+  survival.wave = n; survival.state = "active"; survival.pending = waveSize(n); survival.alive = 0; survival.spawnT = 0.4;
+  survBanner("VAGUE " + n, waveSize(n) + " infectés"); Snd.start();
+}
+function spawnZombie() {
+  const st = zombieStats(survival.wave);
+  const far = SURV_SPAWNS.filter((p) => Math.hypot(p[0] - player.x, p[1] - player.z) > 22), pool = far.length ? far : SURV_SPAWNS;
+  const sp = pool[(Math.random() * pool.length) | 0];
+  const e = makeBot(ROSTER[(Math.random() * ROSTER.length) | 0], "en", "Infecté");
+  e.zombie = true; e.x = sp[0] + rand(-2, 2); e.z = sp[1] + rand(-2, 2); e.hp = st.hp; e.zspd = st.spd; e.zdmg = st.dmg; e.zatk = st.atk; e.atkCD = 0.6;
+  e.mesh.material.color.set(0x6f9158); e.ring.material.color.set(0x7a2222);   // teinte « infecté » verte + anneau rouge
+  entities.push(e); survival.alive++; survival.pending--;
+}
+function survivalTick(dt) {
+  if (survival.state === "break") { survival.breakT -= dt; if (survival.breakT <= 0) startWave(survival.wave + 1); }
+  else if (survival.state === "active") {
+    if (survival.pending > 0 && survival.alive < SURV_MAXALIVE) { survival.spawnT -= dt; if (survival.spawnT <= 0) { spawnZombie(); survival.spawnT = rand(0.5, 1.15); } }
+    if (survival.alive <= 0 && survival.pending <= 0) { survival.state = "break"; survival.breakT = 5.5; survBanner("VAGUE " + survival.wave + " TERMINÉE", "Prépare-toi…"); Snd.roundWin(); }
+  }
+}
+function survivalOnKill(e) { survival.alive = Math.max(0, survival.alive - 1); score.you++; }
+function survivalGameOver() {
+  roundState = "end"; survival.state = "over"; document.exitPointerLock?.();
+  if (survival.wave > survival.best) { survival.best = survival.wave; try { localStorage.setItem("valotiz_surv", survival.wave); } catch (e) {} }
+  Snd.roundLose();
+  $("overTitle").innerHTML = "<span>GAME OVER</span>"; $("again").textContent = "MENU";
+  $("overSub").textContent = "Vague atteinte : " + survival.wave + " · Record : " + survival.best + " · " + score.you + " infectés éliminés";
+  $("hud").hidden = true; $("over").hidden = false;
 }
 
 // ===================== manches =====================
@@ -1464,7 +1555,9 @@ function updateHUD() {
   $("hpn").textContent = Math.max(0, Math.round(pHP)); $("hpn").classList.toggle("low", pHP <= 30);
   $("armn").textContent = Math.max(0, Math.round(pArmor));
   const a = arms[curW];
-  $("mag").textContent = reloading > 0 ? "…" : a.mag; $("res").textContent = "/ " + a.reserve;
+  $("mag").textContent = reloading > 0 ? "…" : a.mag; $("res").textContent = survival.on ? "/ ∞" : "/ " + a.reserve;
+  if (survival.on) { $("topbar").style.display = "none"; $("survhud").hidden = false; $("svWave").textContent = survival.wave || "—"; $("svLeft").textContent = survival.alive + survival.pending; $("svBest").textContent = survival.best; }
+  else { $("topbar").style.display = ""; $("survhud").hidden = true; }
   $("ammoBox").classList.toggle("reload", reloading > 0);
   $("wName").textContent = W().name;
   $("wOp").classList.toggle("on", curW === "op"); $("wPistol").classList.toggle("on", curW === "pistol"); $("wVandal").classList.toggle("on", curW === "vandal");
@@ -1533,11 +1626,11 @@ function update(dt) {
   if (online && !isHost) { /* état piloté par le « monde » de l'hôte */ }
   else if (online && isHost) {
     if (roundState === "freeze") { roundT -= dt; if (roundT <= 0) { roundState = "live"; roundEnded = false; } }
-    else if (roundState === "live") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endOnlineRound("foe"); } }
+    else if (roundState === "live") { onlineSpikeTick(dt); if (!roundEnded && spike.state !== "planted") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endOnlineRoundSpike("def"); } } }   // temps écoulé avant pose → défense gagne ; après pose c'est la mèche
     else if (roundState === "end") { roundT -= dt; if (roundT <= 0) { if (matchOver) return endOnlineMatch(); startOnlineRound(); } }
   }
   else if (roundState === "freeze") { roundT -= dt; if (roundT <= 0) { roundState = "live"; roundEnded = false; } }
-  else if (roundState === "live") { if (spike.state !== "planted") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endRound(false); } } }  // temps écoulé (avant pose) → la défense gagne ; après pose c'est la mèche qui décide
+  else if (roundState === "live" && !survival.on) { if (spike.state !== "planted") { roundClock -= dt; if (roundClock <= 0) { roundClock = 0; endRound(false); } } }  // temps écoulé (avant pose) → la défense gagne ; après pose c'est la mèche qui décide
   else if (roundState === "end") { roundT -= dt; if (roundT <= 0) { if (matchOver) return endMatch(); startRound(); } }
   netTick(dt);
 
@@ -1588,7 +1681,9 @@ function update(dt) {
   // bots (seulement en live)
   if (roundState === "live") for (const e of entities) { if (e.net) setBotFrame(e, dt); else updateBot(e, dt); }  // net = piloté par le réseau
   else for (const e of entities) setBotFrame(e, dt);
-  if (!online && roundState === "live") spikeTick(dt);   // pose / mèche / désamorçage
+  if (!online && roundState === "live") spikeTick(dt);   // pose / mèche / désamorçage (solo)
+  if (online && roundState !== "idle") onlineSpikeView(dt);   // rendu spike en ligne (mesh/lumière/bips)
+  if (survival.on && roundState === "live") survivalTick(dt);   // vagues d'infectés
   // tracers
   for (let i = tracers.length - 1; i >= 0; i--) { tracers[i].life -= dt; if (tracers[i].life <= 0) { scene.remove(tracers[i].m); tracers.splice(i, 1); } }
   for (let i = impacts.length - 1; i >= 0; i--) { const im = impacts[i]; im.life -= dt; if (im.life < 1) im.m.material.opacity = Math.max(0, im.life) * 0.9; if (im.life <= 0) { scene.remove(im.m); impacts.splice(i, 1); } }
@@ -1651,18 +1746,19 @@ pollSplash();
 function begin(n) { online = false; customMapData = null; teamSize = n; Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; roundNum = 0; STATS = {}; buildMap(currentMap === "pearl" ? "haven" : "pearl"); /* alterne la map à chaque partie */ $("start").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("hud").hidden = false; startRound(); }
 // ===== launcher : onglets + sélection de mode + bouton JOUER =====
 let selMode = "m5";
-const MODE_SUB = { m5: "Entraînement 5v5", m2: "Duel 2v2", online: "Compétitif en ligne", custom: "Partie perso" };
+const MODE_SUB = { m5: "Entraînement 5v5", m2: "Duel 2v2", online: "Compétitif en ligne", custom: "Partie perso", survie: "Cabin Fever · survie" };
 function selectMode(mode) {
   selMode = mode;
   for (const b of document.querySelectorAll(".vl-mode")) b.classList.toggle("sel", b.dataset.mode === mode);
   const sub = $("vlPlaySub"); if (sub) sub.textContent = MODE_SUB[mode] || "";
   const rc = $("roomCode"); if (rc) rc.hidden = (mode !== "online");
-  const dr = $("vlDiffRow"); if (dr) dr.style.display = (mode === "custom") ? "none" : "";
+  const dr = $("vlDiffRow"); if (dr) dr.style.display = (mode === "custom" || mode === "survie") ? "none" : "";
 }
 function playSelected() {
   if (selMode === "m2") begin(2);
   else if (selMode === "m5") begin(5);
   else if (selMode === "online") openOnlineLobby();
+  else if (selMode === "survie") beginSurvival();
   else if (selMode === "custom") { const s = customStore(); const names = Object.keys(s).filter((n) => n !== "__play__"); if (names.length) beginCustom(s[names[0]]); else showTab("maps"); }
 }
 function showTab(tab) {
@@ -1724,7 +1820,7 @@ for (const t of document.querySelectorAll(".vl-tab")) t.addEventListener("click"
 $("vlPlay").addEventListener("click", playSelected);
 $("vlGear").addEventListener("click", openSettings);
 selectMode("m5");
-$("again").addEventListener("click", () => { $("over").hidden = true; $("start").hidden = false; });
+$("again").addEventListener("click", () => { survival.on = false; $("survhud").hidden = true; $("topbar").style.display = ""; $("again").textContent = "REJOUER"; $("over").hidden = true; $("start").hidden = false; });
 
 // ---- maps perso (éditeur) ----
 // L'éditeur n'apparaît qu'en LOCAL (localhost) ou si on l'active volontairement (flag localStorage « valotiz_editor=1 »).
@@ -1759,8 +1855,8 @@ function openSettings() { settingsOpen = true; syncSettingsUI(); $("settings").h
 function closeSettings(resume) { settingsOpen = false; $("settings").hidden = true; if (resume && roundState !== "idle") $("cv").requestPointerLock?.(); }
 function quitToMenu() {
   if (online) { online = false; Net.leave(); }
-  roundState = "idle"; matchOver = false; resetSpike(); document.exitPointerLock?.();
-  $("hud").hidden = true; $("board").hidden = true; $("spectate").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("start").hidden = false; $("spikehud").hidden = true; $("objwrap").hidden = true;
+  roundState = "idle"; matchOver = false; resetSpike(); survival.on = false; document.exitPointerLock?.();
+  $("hud").hidden = true; $("board").hidden = true; $("spectate").hidden = true; $("over").hidden = true; $("lobby").hidden = true; $("start").hidden = false; $("spikehud").hidden = true; $("objwrap").hidden = true; $("survhud").hidden = true; $("topbar").style.display = "";
 }
 function refreshSetVals() {
   $("setVolV").textContent = Math.round(SETTINGS.vol * 100) + "%"; $("setSxV").textContent = SETTINGS.sensX.toFixed(2);
@@ -1959,7 +2055,7 @@ function beginOnline(cfg) {
   // l'hôte crée les bots de remplissage (IA locale) et lance la 1re manche ; les autres suivent le « monde »
   cfg.botsAtt = cfg.botsAtt | 0; cfg.botsDef = cfg.botsDef | 0; onlineCfg = cfg;
   stat(YOU_KEY, "att", myName || "Toi", ROSTER[myAv % ROSTER.length]);
-  if (isHost) startOnlineRound(); else { roundState = "freeze"; roundNum = 1; respawnSelf(); $("hud").hidden = false; buildTopbarOnline(); }
+  if (isHost) startOnlineRound(); else { roundState = "freeze"; roundNum = 1; onlineSpikeReset(); respawnSelf(); $("hud").hidden = false; buildTopbarOnline(); }
 }
 let onlineCfg = null, hostBotSeq = 0;
 function respawnSelf() {
@@ -1980,6 +2076,7 @@ function removeRemote(id) { const e = remoteById.get(id); if (!e) return; scene.
 // ---- hôte : manches + bots ----
 function startOnlineRound() {
   roundNum++; roundState = "freeze"; roundT = 2.0; roundClock = 120; roundEnded = false; oneLeftPlayed = false;
+  onlineSpikeReset();
   respawnSelf();
   // (re)place les bots de l'hôte
   for (const e of [...remoteById.values()]) if (!e.human) removeRemote(e.netid);
@@ -2016,7 +2113,7 @@ function onRelay(from, d) {
   if (d.k === "st") {                              // état d'un joueur distant
     const e = ensureEnt(from, d.tm, d.av, d.nm, true); const [lx, lz] = mir(d.x, d.z);
     pushSnap(e, lx, lz, cYaw(d.fa));   // snapshot dans le tampon (interpolé au rendu)
-    e.faceAngle = cYaw(d.fa); e.moving = d.mv; e.hp = d.hp; e.alive = d.al;
+    e.faceAngle = cYaw(d.fa); e.moving = d.mv; e.hp = d.hp; e.alive = d.al; e.planting = !!d.pl;
     e.mesh.visible = d.al; e.ring.visible = d.al;
   } else if (d.k === "shot") { Snd.shot(0.16); }   // FX sonore d'un tir distant
   else if (d.k === "hit") { if (d.target === netId) takeNetDamage(d.dmg, d.head, d.by); }
@@ -2025,7 +2122,7 @@ function onRelay(from, d) {
   else if (d.k === "killby") { if (d.by === netId) badgeLocal(); }
   else if (d.k === "world") { if (!isHost) applyWorld(d); }
   else if (d.k === "kf") { killFeed(d.kn, d.vn, d.vst === myTeam ? "att" : "en", d.head); }
-  else if (d.k === "round") { if (!isHost && d.rn > roundNum) { roundNum = d.rn; roundState = "freeze"; respawnSelf(); banner("MANCHE " + d.rn, "5 v 5 en ligne", ""); } }
+  else if (d.k === "round") { if (!isHost && d.rn > roundNum) { roundNum = d.rn; roundState = "freeze"; onlineSpikeReset(); respawnSelf(); banner("MANCHE " + d.rn, "5 v 5 en ligne", ""); } }
   else if (d.k === "end") { onlineRoundEndFx(d.winTeam); }
 }
 function badgeLocal() { roundKills++; Snd.streak(roundKills); showKillBadge(roundKills); }
@@ -2037,11 +2134,11 @@ function onlineKill(e, byId, head) {   // hôte : un bot meurt → feed + crédi
   if (byId === netId) badgeLocal(); else Net.relay({ k: "killby", by: byId });     // badge au tueur
   checkOnlineRound();
 }
-function checkOnlineRound() {   // hôte : fin de manche par élimination
+function checkOnlineRound() {   // hôte : fin de manche (élimination + spike)
   if (roundState !== "live" || roundEnded) return;
-  const aliveT = (lt) => { let n = 0; if (lt === "att" && player.alive) n++; for (const e of entities) if (e.alive && e.team === lt) n++; return n; };
-  const mine = aliveT("att"), foe = aliveT("en");
-  if (foe === 0) endOnlineRound("mine"); else if (mine === 0) endOnlineRound("foe");
+  const att = attackersAlive(), def = defendersAlive();
+  if (spike.state === "planted") { if (def === 0) endOnlineRoundSpike("att"); return; }   // après pose : seul désamorçage/explosion décide (sauf si plus de défenseurs)
+  if (att === 0) endOnlineRoundSpike("def"); else if (def === 0) endOnlineRoundSpike("att");
 }
 function endOnlineRound(who) {   // who = "mine"/"foe" du point de vue hôte
   roundEnded = true; roundState = "end"; roundT = 3.0;
@@ -2057,6 +2154,54 @@ function onlineRoundEndFx(winServer) {   // seulement effets (le score vient du 
     if (player && player.alive && teamAlive("att") === 1) showClutch(); }   // dernier survivant → CLUTCH
   else { Snd.roundLose(); banner("MANCHE PERDUE", "", "bad"); }
 }
+// ---- Spike EN LIGNE (hôte autoritaire, simulé en repère canonique) ----
+let spikePrevState = "carried";
+function onlineSpikeReset() { resetSpike(); spike.target = SITES[(Math.random() * SITES.length) | 0]; spikePrevState = "carried"; }
+const canonOf = (ex, ez) => mir(ex, ez);                 // local (hôte/client) → canonique
+const nearC = (cx, cz, s, r) => Math.hypot(cx - s.x, cz - s.z) < r;
+function attackersAlive() { let n = (myTeam === "att" && player.alive) ? 1 : 0; for (const e of entities) if (e.alive && e.serverTeam === "att") n++; return n; }
+function defendersAlive() { let n = (myTeam === "def" && player.alive) ? 1 : 0; for (const e of entities) if (e.alive && e.serverTeam === "def") n++; return n; }
+function siteClearOfDef(site) {
+  for (const e of entities) if (e.alive && e.serverTeam === "def") { const [cx, cz] = canonOf(e.x, e.z); if (nearC(cx, cz, site, 11)) return false; }
+  if (myTeam === "def" && player.alive) { const [cx, cz] = canonOf(player.x, player.z); if (nearC(cx, cz, site, 11)) return false; }
+  return true;
+}
+function endOnlineRoundSpike(winServerTeam) { endOnlineRound(winServerTeam === myTeam ? "mine" : "foe"); }
+function onlineSpikeTick(dt) {   // hôte uniquement
+  if (spike.state === "carried") {
+    let planting = false, site = null;
+    if (myTeam === "att" && player.alive && keys.KeyE) { const [cx, cz] = canonOf(player.x, player.z); for (const s of SITES) if (nearC(cx, cz, s, PLANT_R)) { planting = true; site = s; } }
+    if (!planting) for (const e of entities) if (e.alive && e.serverTeam === "att") { const [cx, cz] = canonOf(e.x, e.z); if (nearC(cx, cz, spike.target, PLANT_R) && ((e.human && e.planting) || !e.human) && siteClearOfDef(spike.target)) { planting = true; site = spike.target; break; } }
+    if (planting) { spike.plantProg += dt; if (spike.plantProg >= PLANT_TIME) { spike.state = "planted"; spike.site = site; spike.fuse = FUSE_TIME; spike.plantProg = 0; spike.defuseProg = 0; Snd.spikePlant(); banner("SPIKE POSÉE", "Site " + site.label, "good"); } }
+    else spike.plantProg = Math.max(0, spike.plantProg - dt * 1.6);
+  } else if (spike.state === "planted") {
+    spike.fuse -= dt;
+    let defusing = false;
+    if (myTeam === "def" && player.alive && keys.KeyE) { const [cx, cz] = canonOf(player.x, player.z); if (nearC(cx, cz, spike.site, PLANT_R)) defusing = true; }
+    if (!defusing) for (const e of entities) if (e.alive && e.serverTeam === "def") { const [cx, cz] = canonOf(e.x, e.z); if (nearC(cx, cz, spike.site, PLANT_R) && (!e.human || e.planting)) { defusing = true; break; } }
+    if (defusing) { spike.defuseProg += dt; if (spike.defuseProg >= DEFUSE_TIME) { spike.state = "defused"; Snd.defused(); endOnlineRoundSpike("def"); return; } }
+    else spike.defuseProg = Math.max(spike.defuseProg >= DEFUSE_HALF ? DEFUSE_HALF : 0, spike.defuseProg - dt * 0.7);
+    if (spike.fuse <= 0) { spike.state = "exploded"; Snd.spikeBoom(); endOnlineRoundSpike("att"); }
+  }
+}
+function onlineSpikeView(dt) {   // hôte + client : rend le mesh + lumière + bips
+  if (spike.state === "planted") {
+    if (!spike.mesh && spike.site) { const [lx, lz] = mir(spike.site.x, spike.site.z); spike.mesh = makeSpikeMesh(lx, lz); spikeBeepT = 0; }
+    if (spike._mixer) spike._mixer.update(dt);
+    const interval = clamp(spike.fuse / FUSE_TIME, 0.16, 1.0);
+    spikeBeepT -= dt; if (spikeBeepT <= 0) { Snd.spikeBeep(spike.fuse < 8); spikeBeepT = interval; }
+    if (spike._light) { const ph = (performance.now() / 1000 % interval) / interval; spike._light.visible = true; spike._light.scale.setScalar(0.55 + 0.85 * Math.max(0, Math.sin(ph * Math.PI))); }
+  } else if (spike.mesh) { scene.remove(spike.mesh); spike.mesh = null; spike._light = null; spike._mixer = null; }
+}
+function onlineSpikeApply(sp) {   // client : état spike reçu de l'hôte
+  spike.state = sp.st; spike.fuse = sp.fz; spike.plantProg = sp.pp; spike.defuseProg = sp.dp; spike.site = sp.si >= 0 ? SITES[sp.si] : null;
+  if (spike.state !== spikePrevState) {
+    if (spike.state === "planted") { Snd.spikePlant(); banner("SPIKE POSÉE", "Site " + (spike.site ? spike.site.label : ""), "good"); }
+    else if (spike.state === "exploded") Snd.spikeBoom();
+    else if (spike.state === "defused") Snd.defused();
+    spikePrevState = spike.state;
+  }
+}
 let onlineEnding = false;
 function applyWorld(d) {   // client : applique le monde de l'hôte (bots + manche)
   roundState = d.rs; roundClock = d.cl;
@@ -2065,6 +2210,7 @@ function applyWorld(d) {   // client : applique le monde de l'hôte (bots + manc
   for (const b of d.bots) { seen.add(b.id); const e = ensureEnt(b.id, b.tm, b.av, "Bot", false); const [lx, lz] = mir(b.x, b.z); pushSnap(e, lx, lz, cYaw(b.fa)); e.faceAngle = cYaw(b.fa); e.moving = b.mv; e.hp = b.hp; e.alive = b.al; e.mesh.visible = b.al; e.ring.visible = b.al; }
   for (const e of [...remoteById.values()]) if (!e.human && !seen.has(e.netid)) removeRemote(e.netid);   // bots disparus
   applyBoardStats(d.ns);   // K/D reçu de l'hôte → tableau Tab
+  if (d.sp) onlineSpikeApply(d.sp);   // état spike autoritaire
   if (!onlineEnding && (score.you >= 5 || score.en >= 5)) { onlineEnding = true; setTimeout(endOnlineMatch, 2600); }
 }
 // ---- envoi réseau (appelé dans la boucle) ----
@@ -2074,7 +2220,7 @@ function netTick(dt) {
   if (netSendT <= 0) {
     netSendT = 0.033;   // ~30 Hz (plus de paquets = tampon d'interpolation plus régulier)
     const [cx, cz] = mir(player.x, player.z), moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
-    Net.relay({ k: "st", tm: myTeam, av: myAv, nm: myName || "Joueur", x: cx, z: cz, y: player.y || 0, fa: cYaw(yaw), mv: !!moving && player.alive, hp: pHP, al: player.alive });
+    Net.relay({ k: "st", tm: myTeam, av: myAv, nm: myName || "Joueur", x: cx, z: cz, y: player.y || 0, fa: cYaw(yaw), mv: !!moving && player.alive, hp: pHP, al: player.alive, pl: !!(keys.KeyE && player.alive) });
   }
   if (isHost) {
     worldSendT -= dt;
@@ -2083,7 +2229,8 @@ function netTick(dt) {
       const bots = []; for (const e of entities) if (!e.human) { const [cx, cz] = mir(e.x, e.z); bots.push({ id: e.netid, tm: e.serverTeam, av: e.avIdx, x: cx, z: cz, y: e.mesh.position.y || 0, fa: cYaw(e.faceAngle || 0), mv: !!e.moving, hp: e.hp, al: e.alive }); }
       const satt = myTeam === "att" ? score.you : score.en, sdef = myTeam === "att" ? score.en : score.you;
       applyBoardStats(netStats);   // l'hôte applique son propre K/D au tableau local
-      Net.relay({ k: "world", rs: roundState, cl: roundClock, satt, sdef, bots, ns: netStats });
+      const sp = { st: spike.state, si: spike.site ? (spike.site.label === "A" ? 0 : 1) : -1, fz: Math.max(0, spike.fuse), pp: spike.plantProg, dp: spike.defuseProg };
+      Net.relay({ k: "world", rs: roundState, cl: roundClock, satt, sdef, bots, ns: netStats, sp });
     }
   }
 }

@@ -16,11 +16,17 @@ En solo la map alterne à chaque partie ; en ligne elle est **dérivée du seed 
   **40 s** → si elle explose, les attaquants gagnent la manche ; les défenseurs peuvent **désamorcer** (~6,5 s, palier 50 %).
   Après la pose, tuer tous les attaquants ne suffit plus : il faut désamorcer avant l'explosion. HUD dédié (barre de pose /
   désamorçage, minuteur de Spike qui accélère). Les bots jouent l'objectif (attaquants convergent et arment, défenseurs retake).
-  **Modèle 3D texturé** de la Spike (embarqué en base64 dans `fps/spikemodel.js` pour fonctionner partout).
+  **Modèle 3D texturé** de la Spike (embarqué en base64 dans `fps/spikemodel.js` pour fonctionner partout), avec sons
+  **plant/defuse** officiels. Disponible aussi **en ligne** (hôte autoritaire : pose par les attaquants, désamorçage par
+  les défenseurs, état diffusé dans le paquet « monde »).
 - **Mini-map circulaire style Valorant** en haut à gauche : plan « blueprint » (murs cyan, bâtiment central), sites **A/B**
   en doré, ta position (chevron blanc orienté), tes alliés, les ennemis **repérés** (ligne de vue) et la Spike posée —
   ton spawn est en bas.
 - **Impacts de balle** : décalque + étincelle au point d'impact des tirs sur les murs (fondu, pool recyclé).
+- **Mode « Cabin Fever » (survie)** : seul dans l'arène fermée, tu affrontes des **vagues d'infectés** de plus en plus
+  grosses et coriaces (HP/vitesse/dégâts qui montent par vague). Les infectés foncent et frappent au corps-à-corps ;
+  munitions **illimitées**. HUD dédié (n° de vague, infectés restants, record). Game over quand tu tombes → record de
+  vague sauvegardé en local. Sélectionnable depuis le menu (**CABIN FEVER**).
 - **HUD du haut type Valorant** : portraits des deux équipes (PV + vivants/morts), scores, et **timer de manche de 2:00**
   au centre (si le temps s'écoule **avant la pose**, la défense gagne la manche).
 - **Sprites directionnels** : on voit l'orientation réelle des avatars (face / dos / profil selon leur déplacement et leur
