@@ -155,3 +155,5 @@ systemctl restart valotiz-ws      # redémarrer
 - Port WS configurable : `Environment=WS_PORT=9000` dans le service (et `proxy_pass ...:9000` côté nginx).
 - Vérifie que les ports du cloud provider (Security Group / pare-feu externe) sont ouverts : 22, 80, 443, et 8090/8091 en option A.
 - `git pull` refusé pour « local changes » ? Tu as modifié un fichier sur le VPS : `git checkout -- .` puis relance `update.sh`.
+- « **dubious ownership** » (repo à valotiz, git lancé en root) : `git config --global --add safe.directory /opt/valotiz/app` (une fois).
+- « **Permission denied** » sur un `.sh` : lance-le avec `bash deploy/update.sh`, ou `chmod +x deploy/*.sh`.

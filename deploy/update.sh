@@ -5,6 +5,9 @@
 set -e
 APP=/opt/valotiz/app
 
+# le repo appartient à l'utilisateur valotiz mais on lance git en root → autoriser
+git config --global --add safe.directory "$APP" 2>/dev/null || true
+
 echo ">> git pull dans $APP"
 cd "$APP"
 git pull --ff-only

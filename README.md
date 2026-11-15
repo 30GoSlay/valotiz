@@ -31,8 +31,14 @@ En solo la map alterne à chaque partie ; en ligne elle est **dérivée du seed 
 - **Perf** : suppression des lumières ponctuelles par lanterne, ombres allégées (1024), rendu « high-performance ».
 - **Netcode** : **interpolation** des joueurs/bots distants (mouvement lissé au lieu de téléportations).
 - **5v5 en ligne (vrai multijoueur WebSocket)** : un **serveur** (`server.mjs`, zéro dépendance) gère le matchmaking 5v5,
-  le lobby et le relais ; le 1er connecté est l'**hôte** (son client simule les bots et les manches). Les emplacements vides
-  sont **complétés par des bots**. Si le serveur est injoignable, le mode bascule en entraînement contre des bots.
+  le lobby et le relais ; le 1er connecté est l'**hôte** (son client simule les bots et les manches). Si le serveur est
+  injoignable, le mode bascule en entraînement contre des bots. Fonctions en ligne :
+  - **Pseudo** mémorisé (navigateur) + **jeton joueur** permanent (base des stats).
+  - **Lobby** : on attend **2 vrais joueurs** (puis départ en 8 s) ; sinon on **complète avec des bots au bout de 60 s**.
+  - **K/D/A en ligne** suivi par l'hôte et affiché au **Tab** (bots inclus).
+  - **ELO** (persisté dans `data.json` côté serveur) : il ne bouge que si **chaque équipe a ≥ 1 humain** (sinon gelé, c'est
+    de l'entraînement vs bots). **Classement 🏆** consultable depuis le menu.
+  - **Codes de salon** : saisis le même code pour tomber dans la partie de tes amis.
 - **Trois armes** (touches 1-3, molette pour changer) : **1 Operator** (sniper, un coup = un kill, **lunette en bascule
   au clic droit**), **2 Pistolet** (semi-auto), **3 Vandale** (fusil auto).
 - **Animation de rechargement** : l'arme plonge, s'incline puis revient (procédurale, le bundle n'a pas d'anim bakée).

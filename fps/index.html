@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Avatar Tactique — FPS</title>
-<link rel="icon" href="data:,">
+<title>VALOTIZ</title>
+<meta name="description" content="VALOTIZ — FPS tactique 5v5 à la Valorant : multijoueur en ligne (ELO, classement), bots, deux maps et éditeur de map.">
+<meta name="theme-color" content="#0d1420">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VALOTIZ">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root { color-scheme: dark; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -236,7 +242,16 @@
       <div class="keys"><span class="key">WASD — bouger</span><span class="key">Espace — sauter</span><span class="key">Souris — viser</span><span class="key">Clic — tirer</span><span class="key">1/2/3 — Operator / Pistolet / Vandale</span><span class="key">Clic droit — lunette (bascule)</span><span class="key">R — recharger</span><span class="key">Maj — marcher</span><span class="key">Tab — tableau</span></div>
       <p style="margin-top:10px;font-weight:700">Choisis ton format :</p>
       <div class="modes"><button class="mode" data-n="2">2<b>v</b>2</button><button class="mode" data-n="5">5<b>v</b>5</button></div>
-      <button class="btn-online" id="btnOnline">5v5 EN LIGNE <small>— rechercher une partie</small></button>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <span style="opacity:.7;font-size:13px;white-space:nowrap">Pseudo</span>
+        <input id="pseudo" maxlength="14" placeholder="Ton pseudo (online)" style="flex:1;background:rgba(8,13,26,.6);border:1px solid rgba(120,200,255,.25);color:#dce6f2;border-radius:8px;padding:8px 10px;font-weight:600">
+      </div>
+      <button class="btn-online" id="btnOnline" style="margin-top:8px">5v5 EN LIGNE <small>— rechercher une partie</small></button>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <input id="roomCode" maxlength="12" placeholder="Code de salon (optionnel)" style="flex:1;background:rgba(8,13,26,.6);border:1px solid rgba(120,200,255,.25);color:#dce6f2;border-radius:8px;padding:8px 10px;font-weight:600;text-transform:uppercase">
+        <button class="btn-online" id="btnLeaderboard" style="flex:0 0 auto;padding:8px 14px">🏆 Classement</button>
+      </div>
+      <div id="eloLabel" style="font-size:12px;opacity:.78;margin-top:6px;text-align:center"></div>
       <div id="editorRow" style="display:flex;gap:8px;margin-top:10px">
         <a class="btn-online" href="editor.html" style="flex:1;text-align:center;text-decoration:none">🛠 Éditeur de map</a>
         <button class="btn-online" id="btnCustom" style="flex:1">🗺 Mes maps</button>
@@ -255,8 +270,15 @@
       <div class="lobby-vs">VS</div>
       <div class="lobby-col en" id="lobbyDef"></div>
     </div>
-    <p class="lobby-count"><b id="lobbyTimer">15</b> s avant de compléter avec des bots</p>
+    <p class="lobby-count"><b id="lobbyTimer">60</b> s</p>
     <div class="modes"><button class="btn" id="lobbyStart">DÉMARRER MAINTENANT</button><button class="btn ghost" id="lobbyCancel">Annuler</button></div>
+  </div>
+</div>
+<div class="panel" id="lbPanel" hidden>
+  <div class="card" style="max-width:540px;width:92%">
+    <h1>🏆 CLASSEMENT <span>ELO</span></h1>
+    <div id="lbRows" style="margin-top:8px"></div>
+    <button class="btn" id="lbClose" style="margin-top:14px">Fermer</button>
   </div>
 </div>
 <div class="panel" id="over" hidden>
@@ -700,6 +722,8 @@ function makeBot(entry, team, name) {
     skill: 0.8, role: "push", post: null, lane: null, ammo: 25, reloadCD: 0, lastSeen: null, searchT: 0, aimAt: null, faceAngle: null, avoidDir: Math.random() < 0.5 ? 1 : -1 };
 }
 function setBotFrame(e, dt) {
+  e.mesh.visible = e.alive; e.ring.visible = e.alive;   // invariante : un mort n'est jamais affiché (corrige les « cadavres » qui restent en online)
+  if (!e.alive) return;
   if (e.net && e.ntx != null) { const k = Math.min(1, dt * 13); e.x += (e.ntx - e.x) * k; e.z += (e.ntz - e.z) * k; }   // interpolation réseau (lissage)
   const r = e.entry; e.mesh.position.set(e.x, e.mesh.position.y, e.z); e.ring.position.set(e.x, 0.04, e.z);
   // billboard : le plan fait toujours face à la caméra…
@@ -954,7 +978,7 @@ function hurtPlayer(dmg, head, attacker) {
   $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,.5)"; setTimeout(() => $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,0)", 220);
   if (pHP <= 0) {
     pHP = 0; player.alive = false;
-    if (online) { killFeed(attacker ? attacker.name : "?", "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: attacker ? attacker.name : null, head }); if (isHost) checkOnlineRound(); }
+    if (online) { killFeed(attacker ? attacker.name : "?", "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: attacker ? attacker.name : null, head }); if (isHost) { ns(netId).d++; checkOnlineRound(); } }   // tué par un bot → pas de crédit humain
     else { if (attacker) creditKill(player, attacker); killFeed(attacker ? attacker.name : null, "Toi", "att", head); checkRound(); }
   }
 }
@@ -1162,7 +1186,8 @@ function endOnlineMatch() {
   const win = score.you > score.en; const card = $("overCard"); card.className = "card"; if (win) Snd.victory();
   $("overTitle").innerHTML = resultBanner(win);
   $("overSub").textContent = win ? "Partie en ligne remportée !" : "Partie en ligne perdue.";
-  $("over").hidden = false; Net.leave();
+  if (isHost) { const winServer = (score.you > score.en) ? myTeam : (myTeam === "att" ? "def" : "att"); Net.send({ t: "result", winTeam: winServer, stats: netStats }); }   // persistance ELO/stats
+  $("over").hidden = false; setTimeout(() => Net.leave(), 400);   // laisse le temps au result de partir avant de fermer
 }
 
 addEventListener("resize", () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
@@ -1283,14 +1308,43 @@ function fillAndStart() {
   setTimeout(() => begin(5), 1300);
 }
 $("btnOnline").addEventListener("click", openOnlineLobby);
-$("lobbyStart").addEventListener("click", () => { if (Net.ws && Net.ws.readyState === 1) Net.send({ t: "start" }); else fillAndStart(); });
-$("lobbyCancel").addEventListener("click", () => { clearInterval(lobbyIv); clearInterval(lobbyAutoT); lobbyAutoT = null; Net.leave(); $("lobby").hidden = true; $("start").hidden = false; });
+// ---- leaderboard (classement ELO) ----
+function showLeaderboard(rows) {
+  const box = $("lbRows"), cols = "28px 1fr 56px 60px 52px";
+  if (!rows || !rows.length) box.innerHTML = '<p style="opacity:.7">Aucune partie enregistrée pour l\'instant.</p>';
+  else box.innerHTML = '<div style="display:grid;grid-template-columns:' + cols + ';gap:6px;font-size:12px;opacity:.6;padding:0 6px 4px"><span>#</span><span>Joueur</span><span>ELO</span><span>V-D</span><span>K/D</span></div>' +
+    rows.map((r, i) => { const kd = (r.deaths ? r.kills / r.deaths : (r.kills || 0)).toFixed(2); return '<div style="display:grid;grid-template-columns:' + cols + ';gap:6px;align-items:center;background:rgba(255,255,255,.04);border-radius:7px;padding:6px;margin-bottom:4px;font-size:13px"><b style="opacity:.6">' + (i + 1) + '</b><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name) + '</span><b style="color:#4fd3e6">' + (r.elo | 0) + '</b><span style="opacity:.8">' + (r.wins | 0) + '-' + (r.losses | 0) + '</span><span style="opacity:.8">' + kd + '</span></div>'; }).join("");
+  $("lbPanel").hidden = false;
+}
+function fetchLeaderboard() {
+  if (Net.ws && Net.ws.readyState === 1) { Net.send({ t: "leaderboard" }); return; }
+  try { const ws = new WebSocket(SRV()); ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.t === "welcome") ws.send(JSON.stringify({ t: "leaderboard" })); else if (m.t === "leaderboard") { showLeaderboard(m.rows); try { ws.close(); } catch {} } } catch {} }; ws.onerror = () => { $("lbRows").innerHTML = '<p style="opacity:.7">Serveur injoignable (lance <b>server.mjs</b>).</p>'; $("lbPanel").hidden = false; }; } catch { $("lbRows").innerHTML = "Serveur injoignable."; $("lbPanel").hidden = false; }
+}
+$("btnLeaderboard").addEventListener("click", fetchLeaderboard);
+$("lbClose").addEventListener("click", () => { $("lbPanel").hidden = true; });
+$("lobbyStart").addEventListener("click", () => { if (Net.ws && Net.ws.readyState === 1) { stopLobbyTimers(); Net.send({ t: "start" }); } else fillAndStart(); });
+$("lobbyCancel").addEventListener("click", () => { stopLobbyTimers(); Net.leave(); $("lobby").hidden = true; $("start").hidden = false; });
 
 // ============================ MULTIJOUEUR (WebSocket) ============================
 // Hôte-autoritaire : le 1er connecté simule les bots + les manches et diffuse le « monde » ; chaque joueur contrôle
 // son propre avatar. Repère canonique partagé (att = sud, def = nord) ; chaque client voit sa perspective en att vs en.
 let online = false, isHost = false, netId = 0, myTeam = "att", myAv = 0, lobbyAutoT = null, netRoom = [];
+// pseudo mémorisé (navigateur) + jeton joueur permanent (base pour l'ELO plus tard)
+let myName = (localStorage.getItem("valotiz_pseudo") || "").trim().slice(0, 14);
+let myPid = localStorage.getItem("valotiz_pid"); if (!myPid) { myPid = "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); try { localStorage.setItem("valotiz_pid", myPid); } catch {} }
+const pseudoEl = $("pseudo");
+if (pseudoEl) { pseudoEl.value = myName; pseudoEl.addEventListener("input", () => { myName = pseudoEl.value.trim().slice(0, 14); try { localStorage.setItem("valotiz_pseudo", myName); } catch {} }); }
+function ensurePseudo() { if (!myName) { myName = "Joueur" + (Math.floor(Math.random() * 9000) + 1000); if (pseudoEl) pseudoEl.value = myName; try { localStorage.setItem("valotiz_pseudo", myName); } catch {} } return myName; }
+let myElo = parseInt(localStorage.getItem("valotiz_elo") || "0", 10) || null, myRoomCode = "";
+function updateEloLabel() { const el = $("eloLabel"); if (el) el.textContent = myElo ? ("ELO " + myElo + (myName ? " · " + myName : "")) : ""; }
+function esc(s) { return String(s == null ? "" : s).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c])); }
+updateEloLabel();
 let netSendT = 0, worldSendT = 0;
+// K/D/A en ligne : l'HÔTE seul compte (clé = netId du joueur humain), puis diffuse dans le « monde » → tous affichent au Tab
+let netStats = {};
+const ns = (id) => netStats[id] || (netStats[id] = { k: 0, d: 0, a: 0 });
+function statKeyOfNet(id) { if (id === netId) return YOU_KEY; const e = remoteById.get(id); return e ? (e.serverTeam + ":" + e.name) : null; }
+function applyBoardStats(bs) { if (!bs) return; for (const id in bs) { const key = statKeyOfNet(Number(id)); if (key && STATS[key]) { STATS[key].k = bs[id].k | 0; STATS[key].d = bs[id].d | 0; STATS[key].a = bs[id].a | 0; } } }
 const remoteById = new Map();                 // id réseau -> entité (humains distants + bots chez l'hôte)
 // URL du serveur temps réel : en HTTPS (derrière nginx TLS) → wss://host/ws ; sinon (HTTP local / VPS par IP) → ws://host:8091
 const SRV = () => (location.protocol === "https:")
@@ -1306,15 +1360,19 @@ const Net = {
   relay(d) { this.send({ t: "relay", d }); },
   leave() { try { this.send({ t: "leave" }); this.ws && this.ws.close(); } catch {} this.ws = null; netId = 0; },
   handle(m) {
-    if (m.t === "welcome") { netId = m.id; this.send({ t: "join", name: "Toi", avatar: myAv }); }
+    if (m.t === "welcome") { netId = m.id; this.send({ t: "join", name: myName || "Joueur", avatar: myAv, pid: myPid, room: myRoomCode || undefined }); }
     else if (m.t === "room") onRoom(m);
     else if (m.t === "start") beginOnline(m);
     else if (m.t === "left") removeRemote(m.id);
+    else if (m.t === "me") { myElo = m.elo; try { localStorage.setItem("valotiz_elo", String(m.elo)); } catch {} updateEloLabel(); }
+    else if (m.t === "leaderboard") showLeaderboard(m.rows);
     else if (m.t === "relay") onRelay(m.from, m.d);
   },
 };
 let netFailed = false;
 function openOnlineLobby() {
+  ensurePseudo();
+  myRoomCode = (($("roomCode") && $("roomCode").value) || "").trim().toUpperCase().slice(0, 12);
   Snd.resume(); $("start").hidden = true; $("lobby").hidden = false; netFailed = false;
   $("lobbyStatus").textContent = "Connexion au serveur…"; $("lobbyTimer").textContent = "–"; renderLobby(false);
   Net.connect();
@@ -1332,7 +1390,26 @@ function onRoom(m) {
   $("lobbyStatus").textContent = isHost ? "Tu es l'hôte — lance quand tu veux (ou attends le remplissage)." : "En attente de l'hôte…";
   $("lobbyStart").style.display = isHost ? "" : "none";
   renderOnlineLobby(m.players, m.size || 5);
-  if (isHost && !lobbyAutoT) { let t = 15; $("lobbyTimer").textContent = t; lobbyAutoT = setInterval(() => { t--; $("lobbyTimer").textContent = Math.max(0, t); if (t <= 0) { clearInterval(lobbyAutoT); lobbyAutoT = null; Net.send({ t: "start" }); } }, 1000); }
+  // l'hôte attend un 2e vrai joueur avant de lancer ; sinon il complète avec des bots au bout de 60 s
+  if (isHost && !lobbyAutoT) { lobbyMasterT = 60; lobbyGoT = 0; lobbyAutoT = setInterval(hostLobbyTick, 1000); hostLobbyTick(); }
+  if (!isHost) $("lobbyStatus").textContent = "En attente de l'hôte…";
+}
+let lobbyMasterT = 60, lobbyGoT = 0;
+function stopLobbyTimers() { clearInterval(lobbyAutoT); lobbyAutoT = null; clearInterval(lobbyIv); lobbyGoT = 0; }
+function hostLobbyTick() {
+  const humans = netRoom.length;                         // les membres du salon sont tous des humains (les bots sont ajoutés au lancement)
+  if (lobbyGoT > 0) {                                     // assez de joueurs → court compte à rebours de lancement
+    lobbyGoT--; $("lobbyTimer").textContent = lobbyGoT;
+    $("lobbyStatus").textContent = "Joueurs prêts — démarrage dans " + lobbyGoT + " s…";
+    if (humans < 2) { lobbyGoT = 0; }                      // un joueur est reparti → on réattend
+    else if (lobbyGoT <= 0 || humans >= 10) { stopLobbyTimers(); Net.send({ t: "start" }); }
+    return;
+  }
+  if (humans >= 2) { lobbyGoT = 8; $("lobbyTimer").textContent = lobbyGoT; $("lobbyStatus").textContent = "Joueurs prêts — démarrage dans 8 s…"; return; }
+  lobbyMasterT--;
+  $("lobbyTimer").textContent = Math.max(0, lobbyMasterT);
+  $("lobbyStatus").textContent = "En attente d'un 2e joueur… (bots dans " + Math.max(0, lobbyMasterT) + " s)";
+  if (lobbyMasterT <= 0) { stopLobbyTimers(); Net.send({ t: "start" }); }   // 60 s → on complète avec des bots
 }
 function renderOnlineLobby(players, size) {
   const pic = (av, name, meSlot) => `<div class="lslot${meSlot ? " me" : ""}"><span class="pic" style="background-image:url('${PORTRAITS[(ROSTER[(av || 0) % ROSTER.length] || {}).name] || ""}')"></span><span>${name}${meSlot ? ' <span class="tag">toi</span>' : ' <span class="tag">joueur</span>'}</span></div>`;
@@ -1348,7 +1425,7 @@ function beginOnline(cfg) {
   clearInterval(lobbyAutoT); lobbyAutoT = null; clearInterval(lobbyIv);
   online = true; onlineEnding = false; teamSize = 5; isHost = cfg.hostId === netId; hostBotSeq = 0;
   const me = cfg.players.find((p) => p.id === netId) || {}; myTeam = me.team || "att"; myAv = me.avatar | 0;
-  Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; roundNum = 0; STATS = {}; entities = [];
+  Snd.resume(); matchOver = false; score = { you: 0, en: 0 }; roundNum = 0; STATS = {}; entities = []; netStats = {};
   buildMap((cfg.seed % 2) ? "haven" : "pearl");   // même map pour tous (dérivée du seed serveur)
   $("start").hidden = true; $("lobby").hidden = true; $("over").hidden = true; $("hud").hidden = true;
   remoteById.clear();
@@ -1356,7 +1433,7 @@ function beginOnline(cfg) {
   for (const p of cfg.players) if (p.id !== netId) ensureEnt(p.id, p.team, p.avatar, p.name, true);
   // l'hôte crée les bots de remplissage (IA locale) et lance la 1re manche ; les autres suivent le « monde »
   cfg.botsAtt = cfg.botsAtt | 0; cfg.botsDef = cfg.botsDef | 0; onlineCfg = cfg;
-  stat(YOU_KEY, "att", "Toi", ROSTER[myAv % ROSTER.length]);
+  stat(YOU_KEY, "att", myName || "Toi", ROSTER[myAv % ROSTER.length]);
   if (isHost) startOnlineRound(); else { roundState = "freeze"; roundNum = 1; respawnSelf(); $("hud").hidden = false; buildTopbarOnline(); }
 }
 let onlineCfg = null, hostBotSeq = 0;
@@ -1407,7 +1484,7 @@ function takeNetDamage(dmg, head, byId) {
   if (pArmor > 0) { const ab = Math.min(pArmor, dmg * 0.5); pArmor -= ab; dmg -= ab; }
   pHP -= dmg; hitFlash(); const atk = remoteById.get(byId); if (atk) showDamageDir(atk.x, atk.z);
   $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,.5)"; setTimeout(() => $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,0)", 220);
-  if (pHP <= 0) { pHP = 0; player.alive = false; killFeed(nameOf(byId), "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: byId, head }); if (isHost) checkOnlineRound(); }
+  if (pHP <= 0) { pHP = 0; player.alive = false; killFeed(nameOf(byId), "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: byId, head }); if (isHost) { ns(netId).d++; if (typeof byId === "number") ns(byId).k++; checkOnlineRound(); } }
 }
 function onRelay(from, d) {
   if (!d) return;
@@ -1419,7 +1496,7 @@ function onRelay(from, d) {
   } else if (d.k === "shot") { Snd.shot(0.16); }   // FX sonore d'un tir distant
   else if (d.k === "hit") { if (d.target === netId) takeNetDamage(d.dmg, d.head, d.by); }
   else if (d.k === "hitbot") { if (isHost) { const e = remoteById.get(d.id); if (e && e.alive) { e.hp -= d.dmg; if (e.hp <= 0) onlineKill(e, d.by, d.head); } } }
-  else if (d.k === "dead") { const e = remoteById.get(d.id); const vt = e ? e.team : "en"; if (e) { e.alive = false; e.mesh.visible = false; e.ring.visible = false; } killFeed(nameOf(d.by), nameOf(d.id), vt, d.head); if (d.by === netId) badgeLocal(); if (isHost) checkOnlineRound(); }
+  else if (d.k === "dead") { const e = remoteById.get(d.id); const vt = e ? e.team : "en"; if (e) { e.alive = false; e.mesh.visible = false; e.ring.visible = false; } killFeed(nameOf(d.by), nameOf(d.id), vt, d.head); if (d.by === netId) badgeLocal(); if (isHost) { ns(d.id).d++; if (typeof d.by === "number") ns(d.by).k++; checkOnlineRound(); } }
   else if (d.k === "killby") { if (d.by === netId) badgeLocal(); }
   else if (d.k === "world") { if (!isHost) applyWorld(d); }
   else if (d.k === "kf") { killFeed(d.kn, d.vn, d.vst === myTeam ? "att" : "en", d.head); }
@@ -1427,8 +1504,9 @@ function onRelay(from, d) {
   else if (d.k === "end") { onlineRoundEndFx(d.winTeam); }
 }
 function badgeLocal() { roundKills++; Snd.streak(roundKills); showKillBadge(roundKills); }
-function onlineKill(e, byId, head) {   // hôte : un bot (ou humain via hit) meurt → feed + crédit
+function onlineKill(e, byId, head) {   // hôte : un bot meurt → feed + crédit
   e.alive = false; e.mesh.visible = false; e.ring.visible = false; Snd.death();
+  if (typeof byId === "number") ns(byId).k++;   // kill crédité au tueur humain (K/D en ligne)
   killFeed(nameOf(byId), e.name, e.team, head);
   Net.relay({ k: "kf", kn: nameOf(byId), vn: e.name, vst: e.serverTeam, head });   // feed aux autres (équipe serveur → locale)
   if (byId === netId) badgeLocal(); else Net.relay({ k: "killby", by: byId });     // badge au tueur
@@ -1461,6 +1539,7 @@ function applyWorld(d) {   // client : applique le monde de l'hôte (bots + manc
   const seen = new Set();
   for (const b of d.bots) { seen.add(b.id); const e = ensureEnt(b.id, b.tm, b.av, "Bot", false); const [lx, lz] = mir(b.x, b.z); if (e.ntx == null) { e.x = lx; e.z = lz; } e.ntx = lx; e.ntz = lz; e.faceAngle = cYaw(b.fa); e.moving = b.mv; e.hp = b.hp; e.alive = b.al; e.mesh.visible = b.al; e.ring.visible = b.al; }
   for (const e of [...remoteById.values()]) if (!e.human && !seen.has(e.netid)) removeRemote(e.netid);   // bots disparus
+  applyBoardStats(d.ns);   // K/D reçu de l'hôte → tableau Tab
   if (!onlineEnding && (score.you >= 5 || score.en >= 5)) { onlineEnding = true; setTimeout(endOnlineMatch, 2600); }
 }
 // ---- envoi réseau (appelé dans la boucle) ----
@@ -1470,7 +1549,7 @@ function netTick(dt) {
   if (netSendT <= 0) {
     netSendT = 0.05;   // ~20 Hz
     const [cx, cz] = mir(player.x, player.z), moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
-    Net.relay({ k: "st", tm: myTeam, av: myAv, nm: "Toi", x: cx, z: cz, y: player.y || 0, fa: cYaw(yaw), mv: !!moving && player.alive, hp: pHP, al: player.alive });
+    Net.relay({ k: "st", tm: myTeam, av: myAv, nm: myName || "Joueur", x: cx, z: cz, y: player.y || 0, fa: cYaw(yaw), mv: !!moving && player.alive, hp: pHP, al: player.alive });
   }
   if (isHost) {
     worldSendT -= dt;
@@ -1478,7 +1557,8 @@ function netTick(dt) {
       worldSendT = 0.06;
       const bots = []; for (const e of entities) if (!e.human) { const [cx, cz] = mir(e.x, e.z); bots.push({ id: e.netid, tm: e.serverTeam, av: e.avIdx, x: cx, z: cz, y: e.mesh.position.y || 0, fa: cYaw(e.faceAngle || 0), mv: !!e.moving, hp: e.hp, al: e.alive }); }
       const satt = myTeam === "att" ? score.you : score.en, sdef = myTeam === "att" ? score.en : score.you;
-      Net.relay({ k: "world", rs: roundState, cl: roundClock, satt, sdef, bots });
+      applyBoardStats(netStats);   // l'hôte applique son propre K/D au tableau local
+      Net.relay({ k: "world", rs: roundState, cl: roundClock, satt, sdef, bots, ns: netStats });
     }
   }
 }
