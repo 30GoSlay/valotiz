@@ -13,14 +13,16 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root { color-scheme: dark; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
   html, body { height: 100%; overflow: hidden; background: #0b1020; font-family: "Titillium Web", system-ui, sans-serif; color: #eaf2ff; }
   #cv { display: block; width: 100vw; height: 100vh; }
   .hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
   /* ---- bandeau du haut (équipes + timer) type Valorant ---- */
-  .topbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; background: rgba(8,14,30,.74); border-radius: 12px; padding: 6px; backdrop-filter: blur(5px); box-shadow: 0 4px 18px rgba(0,0,0,.3); }
-  .tteam { display: flex; gap: 5px; align-items: center; padding: 0 8px; }
-  .tteam.en { flex-direction: row-reverse; }
+  .topbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; filter: drop-shadow(0 4px 14px rgba(0,0,0,.42)); }
+  .tteam { display: flex; gap: 6px; align-items: center; min-height: 52px; padding: 7px 10px; }
+  .tteam.att { background: linear-gradient(100deg, rgba(14,66,72,.93), rgba(32,150,150,.82)); clip-path: polygon(0 0, 100% 0, calc(100% - 22px) 100%, 0 100%); padding-right: 30px; box-shadow: inset 0 0 0 1px rgba(120,230,235,.28); }
+  .tteam.en { flex-direction: row-reverse; background: linear-gradient(260deg, rgba(88,18,28,.93), rgba(160,40,55,.82)); clip-path: polygon(22px 0, 100% 0, 100% 100%, 0 100%); padding-left: 30px; box-shadow: inset 0 0 0 1px rgba(255,130,130,.24); }
   .tp { position: relative; width: 38px; }
   .tp .pic { width: 38px; height: 38px; border-radius: 7px; background: #0c1526 center/cover no-repeat; display: block; border: 2px solid transparent; }
   .tteam.att .tp .pic { border-color: rgba(79,211,230,.55); } .tteam.en .tp .pic { border-color: rgba(255,106,106,.55); }
@@ -30,8 +32,8 @@
   .tp.dead .pic { filter: grayscale(1) brightness(.4); }
   .tp.dead::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #ff6a6a; font-weight: 900; font-size: 20px; }
   .tp.me .pic { box-shadow: 0 0 0 2px #ffd34d; }
-  .tmid { display: flex; align-items: center; gap: 14px; padding: 0 14px; }
-  .tscore { font-weight: 900; font-size: 26px; min-width: 24px; text-align: center; } .tscore.you { color: #4fd3e6; } .tscore.en { color: #ff6a6a; }
+  .tmid { position: relative; z-index: 2; margin: 0 -17px; display: flex; align-items: center; gap: 16px; padding: 0 26px; background: linear-gradient(180deg, rgba(17,24,38,.98), rgba(8,12,22,.98)); clip-path: polygon(17px 0, calc(100% - 17px) 0, 100% 50%, calc(100% - 17px) 100%, 17px 100%, 0 50%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+  .tscore { font-weight: 900; font-size: 28px; min-width: 22px; text-align: center; } .tscore.you { color: #4fd3e6; text-shadow: 0 0 10px rgba(79,211,230,.45); } .tscore.en { color: #ff6a6a; text-shadow: 0 0 10px rgba(255,106,106,.45); }
   .tclockwrap { display: flex; flex-direction: column; align-items: center; line-height: 1; }
   .tclock { font-weight: 900; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: 1px; } .tclock.low { color: #ff6a6a; }
   .tclockwrap .rnd { font-size: 10px; opacity: .55; font-weight: 700; margin-top: 3px; }
@@ -203,9 +205,11 @@
   .spikehud .sp-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 8px #ff3b3b; animation: spblink 1s infinite; }
   @keyframes spblink { 50% { opacity: .25; } }
   .spikehud.hot { animation: sphot .4s steps(1) infinite; } @keyframes sphot { 50% { background: rgba(130,22,26,.96); border-color: #ff6a6a; } }
-  /* ===== mini-map ===== */
-  #minimap { position: absolute; top: 12px; left: 12px; width: 150px; height: 200px; background: rgba(8,14,26,.5); border: 1px solid rgba(120,200,255,.22); border-radius: 8px; backdrop-filter: blur(3px); box-shadow: 0 4px 16px rgba(0,0,0,.35); }
-  #minimap[hidden] { display: none; }
+  /* ===== mini-map circulaire (style Valorant) ===== */
+  .mmwrap { position: absolute; top: 14px; left: 14px; width: 210px; height: 210px; }
+  .mmwrap[hidden] { display: none; }
+  #minimap { width: 210px; height: 210px; border-radius: 50%; background: radial-gradient(circle at 50% 44%, rgba(12,22,30,.62), rgba(5,10,16,.74)); box-shadow: 0 0 0 2px rgba(120,220,235,.3), 0 0 0 5px rgba(8,16,22,.55), 0 6px 22px rgba(0,0,0,.5), inset 0 0 30px rgba(0,0,0,.45); }
+  .mmwrap .mmspawn { position: absolute; left: 50%; bottom: -16px; transform: translateX(-50%); font-size: 9px; letter-spacing: 1.5px; font-weight: 700; color: rgba(190,230,240,.7); white-space: nowrap; text-transform: uppercase; }
   /* ===== bannières style Valorant ===== */
   #vb { position: absolute; left: 50%; top: 24%; transform: translate(-50%,-50%); z-index: 46; pointer-events: none; text-align: center; font-family: "Oswald","Arial Narrow",Impact,system-ui,sans-serif; }
   #vb[hidden] { display: none; }
@@ -347,7 +351,7 @@
   <div class="timer" id="timer"></div>
   <div class="spectate" id="spectate" hidden>SPECTATEUR · <b id="specName"></b><span class="spechint">clic = joueur suivant</span></div>
   <div class="feed" id="feed"></div>
-  <canvas id="minimap" width="150" height="200"></canvas>
+  <div class="mmwrap" id="mmwrap"><canvas id="minimap" width="420" height="420"></canvas><span class="mmspawn">Ton spawn</span></div>
   <div class="cross" id="cross"><i class="h l"></i><i class="h r"></i><i class="v t"></i><i class="v b"></i></div>
   <div class="hitm" id="hitm"><i class="a"></i><i class="b2"></i><i class="c"></i><i class="d"></i></div>
   <div class="vit" id="vit"></div>
@@ -840,39 +844,42 @@ function buildMap(key) {
   else { buildBlockout(); th.props(); }                      // map intégrée
   mmDirty = true;                                            // la mini-map se reconstruira (nouveaux murs)
 }
-// ===================== mini-map (haut-gauche) =====================
+// ===================== mini-map circulaire (style Valorant) =====================
+const MMS = 420, MMC = MMS / 2, MM_PAD = 26;                       // canevas 2× (420) affiché à 210 ; peu de marge = plan plus zoomé/lisible
 const mmCanvas = $("minimap"), mmx = mmCanvas.getContext("2d");
-const mmBG = document.createElement("canvas"); mmBG.width = 150; mmBG.height = 200; const mmbx = mmBG.getContext("2d");
+const mmBG = document.createElement("canvas"); mmBG.width = MMS; mmBG.height = MMS; const mmbx = mmBG.getContext("2d");
 let mmDirty = true;
-const MM_PAD = 10, mmSc = () => Math.min((150 - 2 * MM_PAD) / (2 * MAPX), (200 - 2 * MM_PAD) / (2 * MAPZ));
-const mmPX = (x) => 75 + x * mmSc(), mmPY = (z) => 100 + z * mmSc();
+const mmSc = () => Math.min((MMS - 2 * MM_PAD) / (2 * MAPX), (MMS - 2 * MM_PAD) / (2 * MAPZ));
+const mmPX = (x) => MMC + x * mmSc(), mmPY = (z) => MMC + z * mmSc();
 function buildMinimapBG() {
-  mmbx.clearRect(0, 0, 150, 200);
-  mmbx.fillStyle = "rgba(18,28,38,.6)"; mmbx.fillRect(mmPX(-MAPX), mmPY(-MAPZ), 2 * MAPX * mmSc(), 2 * MAPZ * mmSc());
-  for (const w of WALLS) {                                        // murs pleins = clairs, caisses = estompées
-    mmbx.fillStyle = w.h >= 4 ? "rgba(150,180,205,.5)" : "rgba(120,140,160,.3)";
-    mmbx.fillRect(mmPX(w.x0), mmPY(w.z0), Math.max(1.2, (w.x1 - w.x0) * mmSc()), Math.max(1.2, (w.z1 - w.z0) * mmSc()));
+  const sc = mmSc(); mmbx.clearRect(0, 0, MMS, MMS);
+  mmbx.fillStyle = "rgba(40,90,105,.1)"; mmbx.fillRect(mmPX(-MAPX), mmPY(-MAPZ), 2 * MAPX * sc, 2 * MAPZ * sc);   // aire jouable
+  for (const w of WALLS) {                                        // murs pleins = blocs teal contourés cyan ; caisses = petits carrés
+    const x = mmPX(w.x0), y = mmPY(w.z0), ww = Math.max(2, (w.x1 - w.x0) * sc), hh = Math.max(2, (w.z1 - w.z0) * sc);
+    if (w.h >= 4) { mmbx.fillStyle = "rgba(55,135,150,.34)"; mmbx.fillRect(x, y, ww, hh); mmbx.strokeStyle = "rgba(95,220,235,.55)"; mmbx.lineWidth = 1.4; mmbx.strokeRect(x, y, ww, hh); }
+    else { mmbx.fillStyle = "rgba(95,200,215,.2)"; mmbx.fillRect(x, y, ww, hh); }
   }
-  for (const s of SITES) {                                        // sites A/B
-    mmbx.strokeStyle = "rgba(255,120,120,.75)"; mmbx.lineWidth = 1.3; mmbx.beginPath(); mmbx.arc(mmPX(s.x), mmPY(s.z), 3.6 * mmSc(), 0, TAU); mmbx.stroke();
-    mmbx.fillStyle = "rgba(255,170,170,.9)"; mmbx.font = "bold 10px system-ui"; mmbx.textAlign = "center"; mmbx.textBaseline = "middle"; mmbx.fillText(s.label, mmPX(s.x), mmPY(s.z));
+  for (const s of SITES) {                                        // sites A/B : carré doré
+    const x = mmPX(s.x), y = mmPY(s.z); mmbx.fillStyle = "rgba(205,165,80,.92)"; mmbx.fillRect(x - 14, y - 14, 28, 28); mmbx.strokeStyle = "rgba(20,14,6,.7)"; mmbx.lineWidth = 1.6; mmbx.strokeRect(x - 14, y - 14, 28, 28);
+    mmbx.fillStyle = "#1a1206"; mmbx.font = "bold 21px 'Oswald',system-ui"; mmbx.textAlign = "center"; mmbx.textBaseline = "middle"; mmbx.fillText(s.label, x, y + 1);
   }
 }
-const mmDot = (x, z, col, r) => { mmx.fillStyle = col; mmx.beginPath(); mmx.arc(mmPX(x), mmPY(z), r || 2.6, 0, TAU); mmx.fill(); };
+const mmDot = (x, z, col, r) => { const px = mmPX(x), py = mmPY(z); mmx.fillStyle = col; mmx.beginPath(); mmx.arc(px, py, r || 6.5, 0, TAU); mmx.fill(); mmx.lineWidth = 1.6; mmx.strokeStyle = "rgba(0,0,0,.5)"; mmx.stroke(); };
 function drawMinimap() {
   if (mmDirty) { buildMinimapBG(); mmDirty = false; }
-  mmx.clearRect(0, 0, 150, 200); mmx.drawImage(mmBG, 0, 0);
+  mmx.clearRect(0, 0, MMS, MMS); mmx.drawImage(mmBG, 0, 0);
   if (!online && spike.state === "planted" && spike.site) {       // spike posée (losange rouge clignotant)
-    const x = mmPX(spike.site.x), y = mmPY(spike.site.z); mmx.save(); mmx.translate(x, y); mmx.rotate(Math.PI / 4); mmx.fillStyle = (performance.now() / 300 | 0) % 2 ? "#ff3b3b" : "#ff9a9a"; mmx.fillRect(-3.2, -3.2, 6.4, 6.4); mmx.restore();
+    const x = mmPX(spike.site.x), y = mmPY(spike.site.z); mmx.save(); mmx.translate(x, y); mmx.rotate(Math.PI / 4); mmx.fillStyle = (performance.now() / 300 | 0) % 2 ? "#ff3b3b" : "#ff9a9a"; mmx.fillRect(-9, -9, 18, 18); mmx.restore();
   }
   for (const e of entities) {                                     // alliés toujours, ennemis seulement s'ils sont en vue
     if (!e.alive) continue;
-    if (e.team === "att") mmDot(e.x, e.z, "#5fe0f0");
-    else if (player && player.alive && hasLOS(player.x, player.z, e.x, e.z)) mmDot(e.x, e.z, "#ff6a6a");
+    if (e.team === "att") mmDot(e.x, e.z, "#4fe3ea");
+    else if (player && player.alive && hasLOS(player.x, player.z, e.x, e.z)) mmDot(e.x, e.z, "#ff5a5a");
   }
-  if (player && player.alive) {                                   // joueur = flèche orientée (ton spawn est en bas)
+  if (player && player.alive) {                                   // joueur = chevron blanc orienté (ton spawn est en bas)
     const px = mmPX(player.x), py = mmPY(player.z), fx = -Math.sin(yaw), fy = -Math.cos(yaw), rx = -fy, ry = fx;
-    mmx.fillStyle = "#ffd34d"; mmx.beginPath(); mmx.moveTo(px + fx * 7, py + fy * 7); mmx.lineTo(px - fx * 4 + rx * 4, py - fy * 4 + ry * 4); mmx.lineTo(px - fx * 4 - rx * 4, py - fy * 4 - ry * 4); mmx.closePath(); mmx.fill();
+    mmx.beginPath(); mmx.moveTo(px + fx * 17, py + fy * 17); mmx.lineTo(px - fx * 10 + rx * 10, py - fy * 10 + ry * 10); mmx.lineTo(px - fx * 4, py - fy * 4); mmx.lineTo(px - fx * 10 - rx * 10, py - fy * 10 - ry * 10); mmx.closePath();
+    mmx.fillStyle = "#ffffff"; mmx.fill(); mmx.lineWidth = 2; mmx.strokeStyle = "rgba(0,0,0,.6)"; mmx.stroke();
   }
 }
 buildMap("pearl");
@@ -1305,7 +1312,7 @@ function hurtPlayer(dmg, head, attacker) {
   pHP -= dmg; hitFlash(); if (attacker) showDamageDir(attacker.x, attacker.z);
   $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,.5)"; setTimeout(() => $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,0)", 220);
   if (pHP <= 0) {
-    pHP = 0; player.alive = false;
+    pHP = 0; player.alive = false; setADS(false);   // sort de la lunette à la mort (sinon on reste coincé dans le viseur en spectateur)
     if (online) { killFeed(attacker ? attacker.name : "?", "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: attacker ? attacker.name : null, head }); if (isHost) { ns(netId).d++; checkOnlineRound(); } }   // tué par un bot → pas de crédit humain
     else { if (attacker) creditKill(player, attacker); killFeed(attacker ? attacker.name : null, "Toi", "att", head); checkRound(); }
   }
@@ -1324,13 +1331,14 @@ function resetSpike() {
 }
 function makeSpikeMesh(x, z) {
   const g = new THREE.Group();
-  if (SPIKE_MODEL) {                                   // modèle texturé fourni, mis à l'échelle (~0,95 u de haut) posé au sol
-    const m = SPIKE_MODEL.clone(true); const s = 0.29; m.scale.set(s, s, s); m.position.y = -0.37 * s; g.add(m);
+  const s = 0.42;                                      // taille plus proche de l'original (~1,5 u de haut), bien visible
+  if (SPIKE_MODEL) {                                   // modèle texturé fourni, posé au sol
+    const m = SPIKE_MODEL.clone(true); m.scale.set(s, s, s); m.position.y = -0.37 * s; g.add(m);
   } else {                                             // repli procédural si le modèle n'est pas encore chargé
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.95, 0.5), new THREE.MeshStandardMaterial({ color: 0x15181d, emissive: 0x3a0000, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.4 }));
     body.position.y = 0.48; g.add(body);
   }
-  const light = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); light.position.y = 1.02; g.add(light);
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); light.position.y = 3.25 * s + 0.12; g.add(light);
   g.position.set(x, 0, z); scene.add(g); spike._light = light; return g;
 }
 function siteClearForAtt(site, r) {   // aucun défenseur vivant trop près (le bot n'arme pas sous le feu immédiat)
@@ -2001,7 +2009,7 @@ function takeNetDamage(dmg, head, byId) {
   if (pArmor > 0) { const ab = Math.min(pArmor, dmg * 0.5); pArmor -= ab; dmg -= ab; }
   pHP -= dmg; hitFlash(); const atk = remoteById.get(byId); if (atk) showDamageDir(atk.x, atk.z);
   $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,.5)"; setTimeout(() => $("vit").style.boxShadow = "inset 0 0 120px 30px rgba(220,40,40,0)", 220);
-  if (pHP <= 0) { pHP = 0; player.alive = false; killFeed(nameOf(byId), "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: byId, head }); if (isHost) { ns(netId).d++; if (typeof byId === "number") ns(byId).k++; checkOnlineRound(); } }
+  if (pHP <= 0) { pHP = 0; player.alive = false; setADS(false); killFeed(nameOf(byId), "Toi", "att", head); Net.relay({ k: "dead", id: netId, by: byId, head }); if (isHost) { ns(netId).d++; if (typeof byId === "number") ns(byId).k++; checkOnlineRound(); } }
 }
 function onRelay(from, d) {
   if (!d) return;
