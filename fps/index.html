@@ -996,7 +996,7 @@ function makeBot(entry, team, name) {
 function setBotFrame(e, dt) {
   e.mesh.visible = e.alive; e.ring.visible = e.alive;   // invariante : un mort n'est jamais affiché (corrige les « cadavres » qui restent en online)
   if (!e.alive) return;
-  if (e.net && e.ntx != null) { const k = Math.min(1, dt * 13); e.x += (e.ntx - e.x) * k; e.z += (e.ntz - e.z) * k; }   // interpolation réseau (lissage)
+  if (e.net && e.buf && e.buf.length) { const s = sampleSnap(e.buf, now() - INTERP_DELAY); if (s) { const k = Math.min(1, dt * 16); e.x += (s.x - e.x) * k; e.z += (s.z - e.z) * k; e.faceAngle = s.fa; } }   // interpolation réseau : tampon + délai de rendu + lissage anti-pop
   const r = e.entry; e.mesh.position.set(e.x, e.mesh.position.y, e.z); e.ring.position.set(e.x, 0.04, e.z);
   // billboard : le plan fait toujours face à la caméra…
   const toCam = Math.atan2(camera.position.x - e.x, camera.position.z - e.z);
@@ -1789,6 +1789,30 @@ const SRV = () => (location.protocol === "https:")
 const mir = (x, z) => myTeam === "def" ? [-x, -z] : [x, z];     // canonique <-> local (involution)
 const cYaw = (y) => myTeam === "def" ? y + Math.PI : y;
 const localTeam = (serverTeam) => serverTeam === myTeam ? "att" : "en";
+// ---- interpolation réseau : tampon de snapshots + délai de rendu (lissage anti-saccade/anti-« collé au mur ») ----
+const INTERP_DELAY = 0.12;   // on affiche les distants 120 ms dans le passé → mouvement fluide malgré la gigue
+const angDelta = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+function pushSnap(e, lx, lz, fa) {
+  const b = e.buf || (e.buf = []);
+  if (b.length === 0) { e.x = lx; e.z = lz; }          // premier paquet : on place net (pas de glissade depuis 0,0)
+  b.push({ t: now(), x: lx, z: lz, fa });
+  if (b.length > 20) b.shift();                         // on garde ~0,6 s d'historique
+}
+// échantillonne la position/orientation au temps de rendu rt (interpole entre 2 snapshots, extrapole un peu si trou)
+function sampleSnap(buf, rt) {
+  const n = buf.length; if (!n) return null;
+  if (rt <= buf[0].t) return { x: buf[0].x, z: buf[0].z, fa: buf[0].fa };
+  if (rt >= buf[n - 1].t) {                             // au-delà du plus récent → extrapolation plafonnée
+    const a = buf[n - 1], p = buf[n - 2];
+    if (!p) return { x: a.x, z: a.z, fa: a.fa };
+    const seg = a.t - p.t; if (seg <= 0) return { x: a.x, z: a.z, fa: a.fa };
+    const over = Math.min((rt - a.t) / seg, 1.2);       // ne dépasse pas ~1,2 segment (évite de foncer dans un mur)
+    return { x: a.x + (a.x - p.x) * over, z: a.z + (a.z - p.z) * over, fa: a.fa + angDelta(p.fa, a.fa) * over };
+  }
+  let i = n - 1; while (i > 0 && buf[i].t > rt) i--;
+  const a = buf[i], b = buf[i + 1], seg = b.t - a.t, f = seg > 0 ? (rt - a.t) / seg : 0;
+  return { x: a.x + (b.x - a.x) * f, z: a.z + (b.z - a.z) * f, fa: a.fa + angDelta(a.fa, b.fa) * f };
+}
 const Net = {
   ws: null,
   connect() { try { this.ws = new WebSocket(SRV()); } catch (e) { return netFail(); } this.ws.onmessage = (e) => { try { Net.handle(JSON.parse(e.data)); } catch {} }; this.ws.onerror = () => netFail(); this.ws.onclose = () => { if (online) netDropped(); }; },
@@ -1926,7 +1950,7 @@ function onRelay(from, d) {
   if (!d) return;
   if (d.k === "st") {                              // état d'un joueur distant
     const e = ensureEnt(from, d.tm, d.av, d.nm, true); const [lx, lz] = mir(d.x, d.z);
-    if (e.ntx == null) { e.x = lx; e.z = lz; } e.ntx = lx; e.ntz = lz;   // cible interpolée (lissage)
+    pushSnap(e, lx, lz, cYaw(d.fa));   // snapshot dans le tampon (interpolé au rendu)
     e.faceAngle = cYaw(d.fa); e.moving = d.mv; e.hp = d.hp; e.alive = d.al;
     e.mesh.visible = d.al; e.ring.visible = d.al;
   } else if (d.k === "shot") { Snd.shot(0.16); }   // FX sonore d'un tir distant
@@ -1973,7 +1997,7 @@ function applyWorld(d) {   // client : applique le monde de l'hôte (bots + manc
   roundState = d.rs; roundClock = d.cl;
   score.you = (myTeam === "att" ? d.satt : d.sdef); score.en = (myTeam === "att" ? d.sdef : d.satt);
   const seen = new Set();
-  for (const b of d.bots) { seen.add(b.id); const e = ensureEnt(b.id, b.tm, b.av, "Bot", false); const [lx, lz] = mir(b.x, b.z); if (e.ntx == null) { e.x = lx; e.z = lz; } e.ntx = lx; e.ntz = lz; e.faceAngle = cYaw(b.fa); e.moving = b.mv; e.hp = b.hp; e.alive = b.al; e.mesh.visible = b.al; e.ring.visible = b.al; }
+  for (const b of d.bots) { seen.add(b.id); const e = ensureEnt(b.id, b.tm, b.av, "Bot", false); const [lx, lz] = mir(b.x, b.z); pushSnap(e, lx, lz, cYaw(b.fa)); e.faceAngle = cYaw(b.fa); e.moving = b.mv; e.hp = b.hp; e.alive = b.al; e.mesh.visible = b.al; e.ring.visible = b.al; }
   for (const e of [...remoteById.values()]) if (!e.human && !seen.has(e.netid)) removeRemote(e.netid);   // bots disparus
   applyBoardStats(d.ns);   // K/D reçu de l'hôte → tableau Tab
   if (!onlineEnding && (score.you >= 5 || score.en >= 5)) { onlineEnding = true; setTimeout(endOnlineMatch, 2600); }
@@ -1983,14 +2007,14 @@ function netTick(dt) {
   if (!online) return;
   netSendT -= dt;
   if (netSendT <= 0) {
-    netSendT = 0.05;   // ~20 Hz
+    netSendT = 0.033;   // ~30 Hz (plus de paquets = tampon d'interpolation plus régulier)
     const [cx, cz] = mir(player.x, player.z), moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD;
     Net.relay({ k: "st", tm: myTeam, av: myAv, nm: myName || "Joueur", x: cx, z: cz, y: player.y || 0, fa: cYaw(yaw), mv: !!moving && player.alive, hp: pHP, al: player.alive });
   }
   if (isHost) {
     worldSendT -= dt;
     if (worldSendT <= 0) {
-      worldSendT = 0.06;
+      worldSendT = 0.045;   // ~22 Hz
       const bots = []; for (const e of entities) if (!e.human) { const [cx, cz] = mir(e.x, e.z); bots.push({ id: e.netid, tm: e.serverTeam, av: e.avIdx, x: cx, z: cz, y: e.mesh.position.y || 0, fa: cYaw(e.faceAngle || 0), mv: !!e.moving, hp: e.hp, al: e.alive }); }
       const satt = myTeam === "att" ? score.you : score.en, sdef = myTeam === "att" ? score.en : score.you;
       applyBoardStats(netStats);   // l'hôte applique son propre K/D au tableau local
